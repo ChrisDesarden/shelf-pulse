@@ -11,13 +11,13 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
   onClose,
 }) => {
   const [githubUser, setGithubUser] = useState('your-username');
-  const [repoName, setRepoName] = useState('daily-inventory-pwa');
+  const [repoName, setRepoName] = useState('shelf-pulse');
   const [copiedCmd, setCopiedCmd] = useState(false);
 
   if (!isOpen) return null;
 
   const cleanUser = githubUser.trim() || 'your-username';
-  const cleanRepo = repoName.trim() || 'daily-inventory-pwa';
+  const cleanRepo = repoName.trim() || 'shelf-pulse';
 
   const gitCommands = [
     'git init',
