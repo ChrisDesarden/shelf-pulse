@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   X,
@@ -106,7 +106,7 @@ export default function App() {
     return 'dark';
   });
 
-  // Layout mode: 'workspace' (default full app) or 'website' (interactive handheld frame + web portal)
+  // Layout mode: 'workspace' (default full app) or 'website' (interactive handheld frame + web portal on desktop)
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LAYOUT_MODE) as LayoutMode | null;
@@ -119,6 +119,20 @@ export default function App() {
     return 'workspace';
   });
 
+  // Track whether viewport is wide enough (>= 1024px) for the desktop Website Showcase split view.
+  // On real mobile/tablet screens (< 1024px), always render the native full-bleed mobile app so a phone never renders a phone bezel inside itself.
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktopViewport(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeView, setActiveView] = useState<'count' | 'summary'>('count');
@@ -128,6 +142,81 @@ export default function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+
+  // Synchronize open modals and SummaryView with browser history so pressing
+  // the hardware/gesture "Back" button on Android or iOS closes the active modal/view
+  // instead of exiting the web page.
+  const hasOverlayOpen =
+    isManageModalOpen ||
+    Boolean(lightboxProduct) ||
+    isResetConfirmOpen ||
+    isGitHubModalOpen ||
+    activeView === 'summary';
+
+  const historyPushedRef = useRef(false);
+  const closingFromPopStateRef = useRef(false);
+
+  useEffect(() => {
+    if (hasOverlayOpen && !historyPushedRef.current) {
+      window.history.pushState({ inventoryOverlay: true }, '');
+      historyPushedRef.current = true;
+    } else if (!hasOverlayOpen && historyPushedRef.current) {
+      historyPushedRef.current = false;
+      if (!closingFromPopStateRef.current && window.history.state?.inventoryOverlay) {
+        window.history.back();
+      }
+      closingFromPopStateRef.current = false;
+    }
+  }, [hasOverlayOpen]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (
+        isManageModalOpen ||
+        lightboxProduct ||
+        isResetConfirmOpen ||
+        isGitHubModalOpen ||
+        activeView === 'summary'
+      ) {
+        closingFromPopStateRef.current = true;
+        historyPushedRef.current = false;
+        setIsManageModalOpen(false);
+        setEditingProduct(null);
+        setLightboxProduct(null);
+        setIsResetConfirmOpen(false);
+        setIsGitHubModalOpen(false);
+        setActiveView('count');
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isManageModalOpen) {
+          setIsManageModalOpen(false);
+          setEditingProduct(null);
+        } else if (lightboxProduct) {
+          setLightboxProduct(null);
+        } else if (isResetConfirmOpen) {
+          setIsResetConfirmOpen(false);
+        } else if (isGitHubModalOpen) {
+          setIsGitHubModalOpen(false);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [
+    isManageModalOpen,
+    lightboxProduct,
+    isResetConfirmOpen,
+    isGitHubModalOpen,
+    activeView,
+  ]);
 
   // Merged categories (preserves custom/empty categories and order)
   const categories = useMemo(
@@ -329,7 +418,9 @@ export default function App() {
     });
   };
 
-  if (activeView === 'summary' && layoutMode === 'workspace') {
+  const isFramed = isDesktopViewport && layoutMode === 'website';
+
+  if (activeView === 'summary' && !isFramed) {
     return (
       <div
         className={
@@ -351,7 +442,6 @@ export default function App() {
   }
 
   const isGroupedView = selectedCategory === 'All' && searchQuery.trim() === '';
-  const isFramed = layoutMode === 'website';
 
   // Core counting & search content (reused in both Full-Screen Workspace and Interactive Website Phone Frame)
   const renderCountingWorkspace = (insidePhoneFrame: boolean) => {
@@ -661,15 +751,15 @@ export default function App() {
     <div
       className={
         highContrast
-          ? `min-h-screen bg-black text-white ${isFramed ? 'pb-10' : 'pb-24'}`
-          : `min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 ${
+          ? `min-h-screen bg-black text-white overflow-x-hidden ${isFramed ? 'pb-10' : 'pb-24'}`
+          : `min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-x-hidden ${
               isFramed ? 'pb-10' : 'pb-24'
             }`
       }
     >
       <OfflineIndicator />
 
-      {/* Compact Sticky Top Header (respects 15% mobile sticky cap alongside bottom bar) */}
+      {/* Compact Sticky Top Header (zero overlap on mobile or desktop) */}
       <header
         className={`sticky top-0 z-30 h-14 border-b backdrop-blur-md flex items-center ${
           highContrast
@@ -679,12 +769,12 @@ export default function App() {
       >
         <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 flex items-center justify-between gap-2">
           {/* Left: App Title & Formatted Date */}
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2 min-w-0">
-            <h1 className="text-sm sm:text-lg font-extrabold tracking-tight leading-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2 min-w-0 flex-1 pr-2">
+            <h1 className="text-sm sm:text-lg font-extrabold tracking-tight leading-tight text-slate-900 dark:text-white truncate">
               Daily Inventory
             </h1>
             <span
-              className={`text-[11px] sm:text-xs font-mono leading-tight whitespace-nowrap ${
+              className={`text-[11px] sm:text-xs font-mono leading-tight truncate ${
                 highContrast
                   ? 'text-emerald-300 font-bold'
                   : 'text-slate-500 dark:text-slate-400'
@@ -697,7 +787,7 @@ export default function App() {
             </span>
           </div>
 
-          {/* Right: Website View Toggle, GitHub Setup, Install PWA, Theme Mode, Manage Catalog */}
+          {/* Right: Desktop Website View Toggle (lg+), GitHub Setup, Install PWA, Theme Mode, Manage Catalog */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
@@ -710,7 +800,7 @@ export default function App() {
                 isFramed ? 'Switch to Full Workspace' : 'Switch to Website View'
               }
               title="Toggle Interactive Website Showcase & Handheld Frame"
-              className={`min-h-[40px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+              className={`hidden lg:flex min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
                 isFramed
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
@@ -725,7 +815,7 @@ export default function App() {
               onClick={() => setIsGitHubModalOpen(true)}
               aria-label="GitHub Push & Pages Guide"
               title="GitHub Push & GitHub Pages Instructions"
-              className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
+              className="hidden sm:flex min-h-[40px] px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span className="hidden lg:inline">GitHub</span>
@@ -738,7 +828,7 @@ export default function App() {
               onClick={cycleThemeMode}
               aria-label={`Switch display mode (current: ${themeMode})`}
               title="Toggle Light / Dark / High-Contrast Warehouse Mode"
-              className={`min-h-[40px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 highContrast
                   ? 'bg-emerald-400 text-slate-950 border-2 border-white'
                   : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
@@ -753,20 +843,20 @@ export default function App() {
               type="button"
               onClick={handleOpenManageProducts}
               aria-label="Manage Catalog"
-              className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-h-[40px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 highContrast
                   ? 'bg-slate-900 text-white border-2 border-white hover:bg-slate-800'
                   : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700'
               }`}
             >
               <Settings2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">Manage Catalog</span>
+              <span>Catalog</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Render either Interactive Website Showcase View or Full-Width Counting Workspace */}
+      {/* Render either Interactive Website Showcase View (on desktop >=1024px) or Full-Width Counting Workspace */}
       {isFramed ? (
         <WebsiteShowcaseView
           products={products}

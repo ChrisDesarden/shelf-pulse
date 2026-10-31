@@ -77,7 +77,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <article
-      className={`rounded-2xl p-3 transition-colors flex ${
+      className={`rounded-2xl p-3 transition-colors flex overflow-hidden ${
         compact ? 'flex-col gap-2.5' : 'flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 sm:p-3.5'
       } ${cardSurfaceClass}`}
       data-testid={`product-card-${product.id}`}
@@ -118,7 +118,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <h3
               className={`text-sm ${
                 compact ? '' : 'sm:text-base'
-              } font-bold leading-snug line-clamp-2 ${
+              } font-bold leading-snug line-clamp-2 min-w-0 flex-1 ${
                 highContrast ? 'text-white' : 'text-slate-900 dark:text-slate-100'
               }`}
             >
@@ -130,10 +130,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               onClick={() => onEditProduct(product)}
               aria-label={`Edit ${product.name}`}
               title="Edit product details"
-              className={`min-w-[32px] min-h-[32px] p-1.5 rounded-lg flex items-center justify-center shrink-0 transition touch-manipulation select-none ${
+              className={`min-w-[34px] min-h-[34px] p-1.5 rounded-lg flex items-center justify-center shrink-0 transition touch-manipulation select-none ${
                 highContrast
                   ? 'bg-slate-800 text-emerald-300 border border-slate-500 hover:bg-slate-700'
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-100/70 dark:bg-slate-800/70 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -190,7 +190,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           compact
             ? 'pt-2 border-t border-slate-100 dark:border-slate-800/80'
             : 'sm:justify-end pt-2 sm:pt-0 border-t border-slate-100 dark:border-slate-800/80 sm:border-t-0'
-        } gap-2 shrink-0`}
+        } gap-2 shrink-0 min-w-0`}
       >
         {/* Mobile crisp SVG barcode aligned left of the quantity controls */}
         <button
@@ -198,10 +198,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           onClick={() => onOpenLightbox(product)}
           className={`${
             compact ? 'block' : 'sm:hidden'
-          } text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-md touch-manipulation`}
+          } text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-md touch-manipulation min-w-0 max-w-[48%] overflow-hidden`}
           aria-label={`Scan barcode ${product.upc} for ${product.name}`}
         >
-          <BarcodeSVG upc={product.upc} height={24} width={1.15} displayValue={false} />
+          <BarcodeSVG upc={product.upc} height={24} width={1.1} displayValue={false} />
         </button>
 
         <div className="flex items-center gap-1.5 shrink-0">
