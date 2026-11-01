@@ -28,10 +28,12 @@ import {
 import {
   computeUpcCheckDigit,
   computeUpcE8,
+  expandUpcEToUpcA12,
   getBarcodeFormatLabel,
   normalizeScannedUpc,
   parseCompleteBackup,
   serializeCompleteBackup,
+  toCanonicalUpcE8,
   type QuantityMap,
 } from '../utils/inventoryLogic';
 import { BarcodeSVG } from './BarcodeSVG';
@@ -670,17 +672,41 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                     </div>
 
                     {upc.length >= 3 && (
-                      <div className="mt-2 flex items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 truncate">
-                            {getBarcodeFormatLabel(upc)}
-                          </span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Scannable Preview
-                          </span>
+                      <div className="mt-2 flex flex-col gap-1.5 bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                              {getBarcodeFormatLabel(upc)}
+                            </span>
+                            {toCanonicalUpcE8(upc) ? (
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                                UPC-E: {toCanonicalUpcE8(upc)} · UPC-A: {expandUpcEToUpcA12(upc)}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                Scannable Preview
+                              </span>
+                            )}
+                          </div>
+                          {toCanonicalUpcE8(upc) && toCanonicalUpcE8(upc) !== upc && (
+                            <button
+                              type="button"
+                              onClick={() => setUpc(toCanonicalUpcE8(upc) || upc)}
+                              className="px-2 py-1 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold font-mono transition touch-manipulation shrink-0"
+                            >
+                              Use {toCanonicalUpcE8(upc)}
+                            </button>
+                          )}
                         </div>
-                        <div className="max-w-[60%] overflow-hidden flex justify-end">
-                          <BarcodeSVG upc={upc} height={24} width={1.15} displayValue={false} />
+                        <div className="w-full overflow-hidden flex justify-center bg-white rounded-lg py-1 border border-slate-100 dark:border-slate-800">
+                          <BarcodeSVG
+                            upc={upc}
+                            height={32}
+                            width={1.35}
+                            displayValue={true}
+                            fontSize={11}
+                            className="border-0"
+                          />
                         </div>
                       </div>
                     )}

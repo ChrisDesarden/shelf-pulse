@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import zlib from 'node:zlib';
 import { INITIAL_PRODUCTS } from '../data/products';
 import {
   computeInventoryMetrics,
@@ -12,6 +14,9 @@ import {
   computeEan8CheckDigit,
   isValidEan8,
   computeUpcE8,
+  toCanonicalUpcE8,
+  expandUpcEToUpcA12,
+  compressUpcAToUpcE8,
   isValidUpcE,
   getBarcodeFormatLabel,
   mergeCategories,
@@ -26,6 +31,7 @@ import {
   encodeEan8Bits,
   encodeUpcEBits,
   decodeUpcFromLuminanceRow,
+  decodeBarcodeFromRgbaImage,
 } from './inventoryLogic';
 
 test('INITIAL_PRODUCTS has 12 realistic items across 4 categories with valid 12-digit UPCs', () => {
@@ -287,3 +293,75 @@ test('encodeUpcABits, encodeEan8Bits, encodeUpcEBits and decodeUpcFromLuminanceR
   assert.equal(decodeUpcFromLuminanceRow(upcELum), sampleUpcE);
   assert.equal(decodeUpcFromLuminanceRow([...upcELum].reverse()), sampleUpcE);
 });
+
+test('handles 0 499770 4 UPC-E barcode across 6-digit, 7-digit, 8-digit, and 12-digit UPC-A forms', () => {
+  assert.equal(computeUpcE8('499770'), '04997704');
+  assert.equal(toCanonicalUpcE8('04997704'), '04997704');
+  assert.equal(toCanonicalUpcE8('499770'), '04997704');
+  assert.equal(toCanonicalUpcE8('0499770'), '04997704');
+  assert.equal(toCanonicalUpcE8('4997704'), '04997704');
+  assert.equal(normalizeScannedUpc('04997704'), '04997704');
+  assert.equal(normalizeScannedUpc('0499770'), '04997704');
+  assert.equal(normalizeScannedUpc('4997704'), '04997704');
+  assert.equal(expandUpcEToUpcA12('04997704'), '049000009774');
+  assert.equal(expandUpcEToUpcA12('499770'), '049000009774');
+  assert.equal(compressUpcAToUpcE8('049000009774'), '04997704');
+});
+
+test('decodeBarcodeFromRgbaImage accurately decodes 04997704 from real tilted blue-ink barcode photo', () => {
+  const buf = fs.readFileSync('public/assets/aistudio/image_20333dd8.png');
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  const idatChunks: Buffer[] = [];
+  let offset = 8;
+  while (offset < buf.length) {
+    const len = buf.readUInt32BE(offset);
+    const type = buf.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IDAT') {
+      idatChunks.push(buf.subarray(offset + 8, offset + 8 + len));
+    }
+    offset += 12 + len;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idatChunks));
+  const bpp = 3;
+  const stride = width * bpp;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  const prevRow = new Uint8Array(stride);
+  const currRow = new Uint8Array(stride);
+  const paeth = (a: number, b: number, c: number) => {
+    const p = a + b - c;
+    const pa = Math.abs(p - a);
+    const pb = Math.abs(p - b);
+    const pc = Math.abs(p - c);
+    if (pa <= pb && pa <= pc) return a;
+    if (pb <= pc) return b;
+    return c;
+  };
+  let srcIdx = 0;
+  for (let y = 0; y < height; y++) {
+    const filter = raw[srcIdx++];
+    for (let i = 0; i < stride; i++) {
+      const x = raw[srcIdx++];
+      const a = i >= bpp ? currRow[i - bpp] : 0;
+      const b = prevRow[i];
+      const c = i >= bpp ? prevRow[i - bpp] : 0;
+      let val = x;
+      if (filter === 1) val = (x + a) & 255;
+      else if (filter === 2) val = (x + b) & 255;
+      else if (filter === 3) val = (x + ((a + b) >> 1)) & 255;
+      else if (filter === 4) val = (x + paeth(a, b, c)) & 255;
+      currRow[i] = val;
+    }
+    for (let x = 0; x < width; x++) {
+      const dst = (y * width + x) * 4;
+      rgba[dst] = currRow[x * 3];
+      rgba[dst + 1] = currRow[x * 3 + 1];
+      rgba[dst + 2] = currRow[x * 3 + 2];
+      rgba[dst + 3] = 255;
+    }
+    prevRow.set(currRow);
+  }
+
+  assert.equal(decodeBarcodeFromRgbaImage(rgba, width, height), '04997704');
+});
+

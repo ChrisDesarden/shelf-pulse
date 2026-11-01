@@ -11,11 +11,13 @@ import {
   ScanBarcode,
 } from 'lucide-react';
 import {
+  compressUpcAToUpcE8,
   computeUpcCheckDigit,
   computeUpcE8,
-  decodeUpcFromLuminanceRow,
+  decodeBarcodeFromRgbaImage,
   getBarcodeFormatLabel,
   normalizeScannedUpc,
+  toCanonicalUpcE8,
 } from '../utils/inventoryLogic';
 
 interface CameraBarcodeScannerModalProps {
@@ -93,8 +95,8 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
   };
 
   /**
-   * Scans an HTMLVideoElement or HTMLImageElement frame using both native BarcodeDetector (if available)
-   * and our multi-scanline 1D UPC-A / EAN-13 luminance decoder.
+   * Scans an HTMLVideoElement or HTMLImageElement frame using both our multi-angle
+   * adaptive-threshold 1D barcode decoder and native BarcodeDetector (if available).
    */
   const decodeFrameSource = async (
     source: HTMLVideoElement | HTMLImageElement,
@@ -103,15 +105,36 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
   ): Promise<string | null> => {
     if (width <= 0 || height <= 0) return null;
 
-    // 1. Try native hardware BarcodeDetector API first if available
+    // 1. Multi-angle adaptive-threshold 1D canvas decoder (accurately preserves 8-digit UPC-E vs 12-digit UPC-A)
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const maxW = source instanceof HTMLImageElement ? 1280 : 960;
+      const scale = width > maxW ? maxW / width : 1;
+      const targetW = Math.max(64, Math.round(width * scale));
+      const targetH = Math.max(32, Math.round(height * scale));
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(source, 0, 0, targetW, targetH);
+        const imgData = ctx.getImageData(0, 0, targetW, targetH).data;
+        const decodedFromBars = decodeBarcodeFromRgbaImage(imgData, targetW, targetH);
+        if (decodedFromBars) {
+          return decodedFromBars;
+        }
+      }
+    }
+
+    // 2. Fallback to native hardware BarcodeDetector API if available
     if (typeof window !== 'undefined' && window.BarcodeDetector) {
       try {
         const detector = new window.BarcodeDetector({
           formats: [
-            'upc_a',
             'upc_e',
-            'ean_13',
+            'upc_a',
             'ean_8',
+            'ean_13',
             'code_128',
             'code_39',
             'code_93',
@@ -122,44 +145,19 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
         const results = await detector.detect(source);
         if (results && results.length > 0) {
           for (const res of results) {
+            if (res.format === 'upc_e') {
+              const upcE8 =
+                toCanonicalUpcE8(res.rawValue) ||
+                compressUpcAToUpcE8(res.rawValue) ||
+                normalizeScannedUpc(res.rawValue);
+              if (upcE8) return upcE8;
+            }
             const code = normalizeScannedUpc(res.rawValue);
             if (code) return code;
           }
         }
       } catch {
-        // Fallback to canvas scanline decoder below
-      }
-    }
-
-    // 2. Pure TypeScript multi-scanline 1D UPC-A / EAN-13 canvas luminance decoder
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const targetW = Math.min(640, width);
-    const targetH = Math.min(480, height);
-    canvas.width = targetW;
-    canvas.height = targetH;
-
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return null;
-    ctx.drawImage(source, 0, 0, targetW, targetH);
-
-    // Sample 9 horizontal scanlines across the middle band (where the barcode is aimed)
-    const scanYRatios = [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7];
-    const rowLuminance = new Uint8Array(targetW);
-
-    for (const ratio of scanYRatios) {
-      const y = Math.max(0, Math.min(targetH - 1, Math.floor(targetH * ratio)));
-      const imgData = ctx.getImageData(0, y, targetW, 1).data;
-      for (let x = 0; x < targetW; x++) {
-        const idx = x * 4;
-        // Standard BT.601 luma
-        rowLuminance[x] = Math.round(
-          0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2]
-        );
-      }
-      const decoded = decodeUpcFromLuminanceRow(rowLuminance);
-      if (decoded) {
-        return decoded;
+        // Ignore native detector errors
       }
     }
 
