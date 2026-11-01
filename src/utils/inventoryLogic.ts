@@ -177,7 +177,7 @@ export function formatInventorySummaryText(
 
 /**
  * Calculates the 12th UPC-A check digit for an 11-digit numeric string,
- * or normalizes any numeric input into a valid 12-digit UPC-A string.
+ * or normalizes an 11-digit prefix into a valid 12-digit UPC-A string.
  */
 export function computeUpcCheckDigit(elevenDigits: string): string {
   const clean = elevenDigits.replace(/\D/g, '').padStart(11, '0').slice(0, 11);
@@ -205,25 +205,111 @@ export function isValidUpcA(upc: string): boolean {
 }
 
 /**
- * Normalizes a scanned barcode string (UPC-A 12-digit, EAN-13 starting with 0, or 11-digit)
- * into a clean 12-digit numeric UPC string.
+ * Calculates the 8th EAN-8 check digit for a 7-digit numeric string.
+ */
+export function computeEan8CheckDigit(sevenDigits: string): string {
+  const clean = sevenDigits.replace(/\D/g, '').padStart(7, '0').slice(0, 7);
+  let sum = 0;
+  for (let i = 0; i < 7; i++) {
+    const digit = Number(clean[i]);
+    sum += digit * (i % 2 === 0 ? 3 : 1);
+  }
+  const check = (10 - (sum % 10)) % 10;
+  return `${clean}${check}`;
+}
+
+/**
+ * Checks whether a string is a valid 8-digit EAN-8 barcode with matching modulo-10 check digit.
+ */
+export function isValidEan8(upc: string): boolean {
+  if (!/^\d{8}$/.test(upc)) return false;
+  return computeEan8CheckDigit(upc.slice(0, 7)) === upc;
+}
+
+/**
+ * Expands a 6-digit UPC-E payload (number system 0) into its equivalent 11-digit UPC-A prefix.
+ */
+export function expandUpcEToUpcA11(sixDigits: string): string {
+  const d = sixDigits.replace(/\D/g, '').padStart(6, '0').slice(0, 6);
+  const last = d[5];
+  if (last === '0' || last === '1' || last === '2') {
+    return `0${d.slice(0, 2)}${last}0000${d.slice(2, 5)}`;
+  }
+  if (last === '3') {
+    return `0${d.slice(0, 3)}00000${d.slice(3, 5)}`;
+  }
+  if (last === '4') {
+    return `0${d.slice(0, 4)}00000${d[4]}`;
+  }
+  return `0${d.slice(0, 5)}0000${last}`;
+}
+
+/**
+ * Builds a valid 8-digit UPC-E barcode string ('0' + 6 digits + check digit) from a 6-digit payload.
+ */
+export function computeUpcE8(sixDigits: string): string {
+  const clean6 = sixDigits.replace(/\D/g, '').padStart(6, '0').slice(0, 6);
+  const upcA12 = computeUpcCheckDigit(expandUpcEToUpcA11(clean6));
+  const checkDigit = upcA12[11];
+  return `0${clean6}${checkDigit}`;
+}
+
+/**
+ * Checks whether a string is a valid 6-digit or 8-digit UPC-E code.
+ */
+export function isValidUpcE(upc: string): boolean {
+  if (/^\d{6}$/.test(upc)) return true;
+  if (/^0\d{7}$/.test(upc)) {
+    const expected = computeUpcE8(upc.slice(1, 7));
+    return expected === upc;
+  }
+  return false;
+}
+
+/**
+ * Returns a human-readable label describing the barcode format for any short or standard UPC.
+ */
+export function getBarcodeFormatLabel(upc: string): string {
+  const clean = (upc || '').trim();
+  if (!clean) return 'Barcode';
+  if (isValidUpcA(clean)) return 'UPC-A (12-Digit)';
+  if (/^0\d{7}$/.test(clean) && isValidUpcE(clean)) return 'UPC-E (8-Digit)';
+  if (isValidEan8(clean)) return 'EAN-8 (8-Digit)';
+  if (/^\d{6}$/.test(clean)) return 'UPC-E / Short (6-Digit)';
+  if (/^\d{13}$/.test(clean)) return 'EAN-13 (13-Digit)';
+  if (/^\d+$/.test(clean)) return `Short UPC (${clean.length}-Digit)`;
+  return `Code 128 (${clean.length}-Char)`;
+}
+
+/**
+ * Normalizes a scanned or entered barcode string while preserving smaller UPCs
+ * (such as 4-digit PLU, 6-digit or 8-digit UPC-E, 8-digit EAN-8, 10-digit SKU, 12-digit UPC-A, or 13-digit EAN-13)
+ * without padding short codes to 12 digits.
  */
 export function normalizeScannedUpc(rawCode: string): string | null {
-  const digits = String(rawCode || '').replace(/\D/g, '');
-  if (!digits) return null;
-  if (digits.length === 13 && digits.startsWith('0')) {
-    return digits.slice(1);
+  const trimmed = String(rawCode || '').trim();
+  if (!trimmed) return null;
+
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length > 0) {
+    // Camera scanners often report 12-digit UPC-A codes as 13-digit EAN-13 with a leading '0'
+    if (digits.length === 13 && digits.startsWith('0') && isValidUpcA(digits.slice(1))) {
+      return digits.slice(1);
+    }
+    // 11-digit UPC-A prefix missing its modulo-10 check digit
+    if (digits.length === 11) {
+      return computeUpcCheckDigit(digits);
+    }
+    // Preserve any valid numeric barcode length from 1 to 14 digits (short PLU, 6-digit, 8-digit UPC-E/EAN-8, 12-digit UPC-A, etc.)
+    if (digits.length >= 1 && digits.length <= 14) {
+      return digits;
+    }
+    return digits.slice(0, 14);
   }
-  if (digits.length === 12) {
-    return digits;
-  }
-  if (digits.length === 11) {
-    return computeUpcCheckDigit(digits);
-  }
-  if (digits.length >= 6 && digits.length <= 14) {
-    return digits.slice(0, 12).padStart(12, '0');
-  }
-  return null;
+
+  // Fallback for alphanumeric Code128 / Code39 barcodes
+  const cleanAlpha = trimmed.replace(/[^A-Za-z0-9-_]/g, '').slice(0, 20);
+  return cleanAlpha || null;
 }
 
 /**
@@ -439,11 +525,10 @@ export function parseCompleteBackup(jsonString: string): {
       if (!item || typeof item.name !== 'string' || !item.name.trim()) {
         throw new Error(`Product at index ${idx} is missing a valid "name".`);
       }
-      const rawUpc = String(item.upc || '').replace(/\D/g, '');
+      const rawUpcStr = String(item.upc || '').trim();
       const cleanUpc =
-        rawUpc.length === 12
-          ? rawUpc
-          : computeUpcCheckDigit(rawUpc.padStart(11, '0'));
+        normalizeScannedUpc(rawUpcStr) ||
+        computeUpcCheckDigit(String(idx + 1).padStart(11, '0'));
       return {
         id: String(item.id || `imp-${idx}-${Date.now()}`),
         name: item.name.trim(),
@@ -480,8 +565,8 @@ export function parseCompleteBackup(jsonString: string): {
 }
 
 /**
- * 1D UPC-A / EAN-13 bit tables for pure TypeScript scanline barcode decoding & encoding.
- * L-codes (left odd parity), G-codes (left even parity for EAN-13), R-codes (right).
+ * 1D UPC-A / UPC-E / EAN-8 / EAN-13 bit tables for pure TypeScript scanline barcode decoding & encoding.
+ * L-codes (left odd parity), G-codes (left even parity), R-codes (right).
  */
 const UPC_L_CODES = [
   '0001101',
@@ -535,9 +620,35 @@ const EAN13_PARITY_TABLE: Record<string, number> = {
   LGGLGL: 9,
 };
 
+const UPCE_PARITY_BY_CHECK_DIGIT: string[] = [
+  'GGGLLL',
+  'GGLGLL',
+  'GGLLGL',
+  'GGLLLG',
+  'GLGGLL',
+  'GLLGGL',
+  'GLLLGG',
+  'GLGLGL',
+  'GLGLLG',
+  'GLLGLG',
+];
+
+const UPCE_PARITY_LOOKUP: Record<string, number> = {
+  GGGLLL: 0,
+  GGLGLL: 1,
+  GGLLGL: 2,
+  GGLLLG: 3,
+  GLGGLL: 4,
+  GLLGGL: 5,
+  GLLLGG: 6,
+  GLGLGL: 7,
+  GLGLLG: 8,
+  GLLGLG: 9,
+};
+
 /**
  * Encodes a 12-digit UPC-A string into its 95-module binary bar string ('1' = dark bar, '0' = light space),
- * surrounded by 9-module quiet zones. Useful for testing and verification.
+ * surrounded by 9-module quiet zones.
  */
 export function encodeUpcABits(upc: string): string {
   const normalized =
@@ -553,6 +664,49 @@ export function encodeUpcABits(upc: string): string {
     bits += UPC_R_CODES[Number(normalized[i])];
   }
   bits += '101000000000'; // End guard + quiet zone
+  return bits;
+}
+
+/**
+ * Encodes an 8-digit EAN-8 string into its 67-module binary bar string surrounded by 9-module quiet zones.
+ */
+export function encodeEan8Bits(ean8: string): string {
+  const digits = ean8.replace(/\D/g, '');
+  const normalized =
+    digits.length === 8 && isValidEan8(digits)
+      ? digits
+      : computeEan8CheckDigit(digits);
+  let bits = '000000000101'; // Quiet zone + start guard
+  for (let i = 0; i < 4; i++) {
+    bits += UPC_L_CODES[Number(normalized[i])];
+  }
+  bits += '01010'; // Center guard
+  for (let i = 4; i < 8; i++) {
+    bits += UPC_R_CODES[Number(normalized[i])];
+  }
+  bits += '101000000000'; // End guard + quiet zone
+  return bits;
+}
+
+/**
+ * Encodes a 6-digit or 8-digit UPC-E barcode into its 51-module binary bar string surrounded by quiet zones.
+ */
+export function encodeUpcEBits(upcE: string): string {
+  const digits = upcE.replace(/\D/g, '');
+  const normalized8 =
+    digits.length === 8 && digits.startsWith('0')
+      ? computeUpcE8(digits.slice(1, 7))
+      : computeUpcE8(digits.slice(0, 6));
+  const payload6 = normalized8.slice(1, 7);
+  const checkDigit = Number(normalized8[7]);
+  const parityPattern = UPCE_PARITY_BY_CHECK_DIGIT[checkDigit];
+
+  let bits = '000000000101'; // Quiet zone + start guard (101)
+  for (let i = 0; i < 6; i++) {
+    const d = Number(payload6[i]);
+    bits += parityPattern[i] === 'G' ? UPC_G_CODES[d] : UPC_L_CODES[d];
+  }
+  bits += '010101000000000'; // 6-module UPC-E end guard (010101) + quiet zone
   return bits;
 }
 
@@ -641,7 +795,25 @@ function matchFourRunsToDigit(
   return { digit: bestDigit, parity: bestParity, error: bestError };
 }
 
-function tryDecodeRuns(
+function hasQuietZones(
+  runs: Array<{ bit: 0 | 1; len: number }>,
+  startIndex: number,
+  endIndexInclusive: number,
+  moduleWidth: number
+): boolean {
+  const minQuiet = moduleWidth * 2.5;
+  if (startIndex > 0) {
+    const prev = runs[startIndex - 1];
+    if (prev.bit !== 0 || prev.len < minQuiet) return false;
+  }
+  if (endIndexInclusive < runs.length - 1) {
+    const next = runs[endIndexInclusive + 1];
+    if (next.bit !== 0 || next.len < minQuiet) return false;
+  }
+  return true;
+}
+
+function tryDecodeUpcAOrEan13(
   runs: Array<{ bit: 0 | 1; len: number }>
 ): string | null {
   if (runs.length < 59) return null;
@@ -649,7 +821,6 @@ function tryDecodeRuns(
   for (let s = 0; s <= runs.length - 59; s++) {
     if (runs[s].bit !== 1) continue;
 
-    // Start guard: 101 (runs[s], runs[s+1], runs[s+2])
     const gStart = (runs[s].len + runs[s + 1].len + runs[s + 2].len) / 3;
     if (gStart <= 0) continue;
     if (
@@ -660,7 +831,6 @@ function tryDecodeRuns(
       continue;
     }
 
-    // Center guard: 01010 at s + 27 .. s + 31
     const cIdx = s + 27;
     const gCenter =
       (runs[cIdx].len +
@@ -726,7 +896,6 @@ function tryDecodeRuns(
         return twelveDigits;
       }
     } else {
-      // Verify EAN-13 modulo-10 check digit
       const ean13 = `${firstDigit}${twelveDigits}`;
       let sum = 0;
       for (let i = 0; i < 12; i++) {
@@ -734,21 +903,175 @@ function tryDecodeRuns(
       }
       const check = (10 - (sum % 10)) % 10;
       if (check === Number(ean13[12])) {
-        return twelveDigits;
+        return ean13;
       }
     }
   }
+  return null;
+}
 
+function tryDecodeEan8(
+  runs: Array<{ bit: 0 | 1; len: number }>
+): string | null {
+  if (runs.length < 43) return null;
+
+  for (let s = 0; s <= runs.length - 43; s++) {
+    if (runs[s].bit !== 1) continue;
+
+    const gStart = (runs[s].len + runs[s + 1].len + runs[s + 2].len) / 3;
+    if (gStart <= 0) continue;
+    if (
+      Math.abs(runs[s].len - gStart) > gStart * 0.85 ||
+      Math.abs(runs[s + 1].len - gStart) > gStart * 0.85 ||
+      Math.abs(runs[s + 2].len - gStart) > gStart * 0.85
+    ) {
+      continue;
+    }
+
+    if (!hasQuietZones(runs, s, s + 42, gStart)) continue;
+
+    const cIdx = s + 19;
+    const gCenter =
+      (runs[cIdx].len +
+        runs[cIdx + 1].len +
+        runs[cIdx + 2].len +
+        runs[cIdx + 3].len +
+        runs[cIdx + 4].len) /
+      5;
+    if (
+      Math.abs(runs[cIdx + 1].len - gCenter) > gCenter * 0.9 ||
+      Math.abs(runs[cIdx + 2].len - gCenter) > gCenter * 0.9 ||
+      Math.abs(runs[cIdx + 3].len - gCenter) > gCenter * 0.9
+    ) {
+      continue;
+    }
+
+    let leftDigits = '';
+    let valid = true;
+    for (let d = 0; d < 4; d++) {
+      const idx = s + 3 + d * 4;
+      const m = matchFourRunsToDigit(
+        runs[idx].len,
+        runs[idx + 1].len,
+        runs[idx + 2].len,
+        runs[idx + 3].len,
+        'left'
+      );
+      if (!m || m.parity !== 'L') {
+        valid = false;
+        break;
+      }
+      leftDigits += String(m.digit);
+    }
+    if (!valid) continue;
+
+    let rightDigits = '';
+    for (let d = 0; d < 4; d++) {
+      const idx = s + 24 + d * 4;
+      const m = matchFourRunsToDigit(
+        runs[idx].len,
+        runs[idx + 1].len,
+        runs[idx + 2].len,
+        runs[idx + 3].len,
+        'right'
+      );
+      if (!m) {
+        valid = false;
+        break;
+      }
+      rightDigits += String(m.digit);
+    }
+    if (!valid) continue;
+
+    const eightDigits = `${leftDigits}${rightDigits}`;
+    if (isValidEan8(eightDigits)) {
+      return eightDigits;
+    }
+  }
+  return null;
+}
+
+function tryDecodeUpcE(
+  runs: Array<{ bit: 0 | 1; len: number }>
+): string | null {
+  if (runs.length < 33) return null;
+
+  for (let s = 0; s <= runs.length - 33; s++) {
+    if (runs[s].bit !== 1) continue;
+
+    const gStart = (runs[s].len + runs[s + 1].len + runs[s + 2].len) / 3;
+    if (gStart <= 0) continue;
+    if (
+      Math.abs(runs[s].len - gStart) > gStart * 0.85 ||
+      Math.abs(runs[s + 1].len - gStart) > gStart * 0.85 ||
+      Math.abs(runs[s + 2].len - gStart) > gStart * 0.85
+    ) {
+      continue;
+    }
+
+    if (!hasQuietZones(runs, s, s + 32, gStart)) continue;
+
+    // End guard 010101 at s + 27 .. s + 32
+    const eIdx = s + 27;
+    const gEnd =
+      (runs[eIdx].len +
+        runs[eIdx + 1].len +
+        runs[eIdx + 2].len +
+        runs[eIdx + 3].len +
+        runs[eIdx + 4].len +
+        runs[eIdx + 5].len) /
+      6;
+    if (
+      Math.abs(runs[eIdx].len - gEnd) > gEnd * 0.9 ||
+      Math.abs(runs[eIdx + 1].len - gEnd) > gEnd * 0.9 ||
+      Math.abs(runs[eIdx + 2].len - gEnd) > gEnd * 0.9 ||
+      Math.abs(runs[eIdx + 3].len - gEnd) > gEnd * 0.9 ||
+      Math.abs(runs[eIdx + 4].len - gEnd) > gEnd * 0.9 ||
+      Math.abs(runs[eIdx + 5].len - gEnd) > gEnd * 0.9
+    ) {
+      continue;
+    }
+
+    let payload6 = '';
+    let paritySeq = '';
+    let valid = true;
+    for (let d = 0; d < 6; d++) {
+      const idx = s + 3 + d * 4;
+      const m = matchFourRunsToDigit(
+        runs[idx].len,
+        runs[idx + 1].len,
+        runs[idx + 2].len,
+        runs[idx + 3].len,
+        'left'
+      );
+      if (!m) {
+        valid = false;
+        break;
+      }
+      payload6 += String(m.digit);
+      paritySeq += m.parity;
+    }
+    if (!valid) continue;
+
+    const checkDigit = UPCE_PARITY_LOOKUP[paritySeq];
+    if (checkDigit === undefined) continue;
+
+    const candidateUpcE8 = `0${payload6}${checkDigit}`;
+    if (isValidUpcE(candidateUpcE8)) {
+      return candidateUpcE8;
+    }
+  }
   return null;
 }
 
 /**
- * Decodes a 12-digit UPC-A barcode from a 1D luminance array (0 = black, 255 = white).
+ * Decodes a 1D barcode (12-digit UPC-A, 13-digit EAN-13, 8-digit EAN-8, or 8-digit UPC-E)
+ * from a 1D luminance array (0 = black, 255 = white).
  * Automatically handles both forward and upside-down barcode orientations.
  */
 export function decodeUpcFromLuminanceRow(luminance: ArrayLike<number>): string | null {
   const len = luminance.length;
-  if (len < 95) return null;
+  if (len < 51) return null;
 
   let minLum = 255;
   let maxLum = 0;
@@ -784,5 +1107,15 @@ export function decodeUpcFromLuminanceRow(luminance: ArrayLike<number>): string 
     return runs;
   };
 
-  return tryDecodeRuns(extractRuns(false)) || tryDecodeRuns(extractRuns(true));
+  const forwardRuns = extractRuns(false);
+  const reverseRuns = extractRuns(true);
+
+  return (
+    tryDecodeUpcAOrEan13(forwardRuns) ||
+    tryDecodeUpcAOrEan13(reverseRuns) ||
+    tryDecodeEan8(forwardRuns) ||
+    tryDecodeEan8(reverseRuns) ||
+    tryDecodeUpcE(forwardRuns) ||
+    tryDecodeUpcE(reverseRuns)
+  );
 }

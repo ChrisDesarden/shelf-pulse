@@ -27,6 +27,9 @@ import {
 } from '../data/products';
 import {
   computeUpcCheckDigit,
+  computeUpcE8,
+  getBarcodeFormatLabel,
+  normalizeScannedUpc,
   parseCompleteBackup,
   serializeCompleteBackup,
   type QuantityMap,
@@ -201,11 +204,17 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
     setFormError('');
   };
 
+  const handleGenerateShortUpc = () => {
+    const randomSix = Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('');
+    setUpc(computeUpcE8(randomSix));
+    setFormError('');
+  };
+
   const handleCameraDetectedUpc = (scannedUpc: string) => {
     setUpc(scannedUpc);
     setIsCameraScannerOpen(false);
     setFormError('');
-    setFormSuccess(`Scanned UPC ${scannedUpc} from camera!`);
+    setFormSuccess(`Scanned ${getBarcodeFormatLabel(scannedUpc)}: ${scannedUpc} from camera!`);
   };
 
   const handleGenerateGraphicThumbnail = () => {
@@ -242,14 +251,11 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
       return;
     }
 
-    const digitsOnly = upc.replace(/\D/g, '');
-    if (digitsOnly.length < 11 || digitsOnly.length > 12) {
-      setFormError('UPC must be 11 or 12 numeric digits.');
+    const normalizedUpc = normalizeScannedUpc(upc);
+    if (!normalizedUpc || normalizedUpc.length < 3) {
+      setFormError('Please enter a valid UPC or barcode (3 to 14 digits, e.g., 6-digit, 8-digit UPC-E/EAN-8, or 12-digit UPC-A).');
       return;
     }
-
-    const normalizedUpc =
-      digitsOnly.length === 11 ? computeUpcCheckDigit(digitsOnly) : digitsOnly;
 
     if (!categories.includes(finalCategory)) {
       onAddCategory(finalCategory);
@@ -607,23 +613,37 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                     </div>
                   )}
 
-                  {/* 12-Digit UPC Number + Live Camera Barcode Scanner Button */}
+                  {/* UPC / Barcode (Short, 8-Digit UPC-E/EAN-8, or 12-Digit UPC-A) + Live Camera Scanner */}
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                       <label
                         htmlFor="new-product-upc"
                         className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                       >
-                        12-Digit UPC Barcode *
+                        UPC / Barcode (Short, 8, or 12-Digit) *
                       </label>
-                      <button
-                        type="button"
-                        onClick={handleGenerateRandomUpc}
-                        className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 touch-manipulation whitespace-nowrap"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                        <span>Generate Random UPC</span>
-                      </button>
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={handleGenerateShortUpc}
+                          data-testid="generate-short-upc-btn"
+                          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 touch-manipulation whitespace-nowrap"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                          <span>8-Digit UPC-E</span>
+                        </button>
+                        <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">
+                          |
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleGenerateRandomUpc}
+                          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 touch-manipulation whitespace-nowrap"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                          <span>12-Digit UPC-A</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -631,10 +651,10 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         id="new-product-upc"
                         type="text"
                         inputMode="numeric"
-                        maxLength={12}
+                        maxLength={14}
                         value={upc}
                         onChange={(e) => setUpc(e.target.value.replace(/\D/g, ''))}
-                        placeholder="12-digit numeric UPC"
+                        placeholder="e.g. 4–8 digit short UPC or 12-digit UPC"
                         className="flex-1 min-w-0 min-h-[42px] px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
                       />
                       <button
@@ -649,11 +669,16 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       </button>
                     </div>
 
-                    {upc.length >= 6 && (
+                    {upc.length >= 3 && (
                       <div className="mt-2 flex items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
-                          Barcode Preview
-                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                            {getBarcodeFormatLabel(upc)}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Scannable Preview
+                          </span>
+                        </div>
                         <div className="max-w-[60%] overflow-hidden flex justify-end">
                           <BarcodeSVG upc={upc} height={24} width={1.15} displayValue={false} />
                         </div>
@@ -985,7 +1010,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         Share Complete Data File with Team
                       </h3>
                       <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
-                        Export all <strong>{categories.length} categories</strong>, <strong>{products.length} products</strong>, <strong>photo links</strong>, and <strong>12-digit UPC barcodes</strong> into a single <code className="font-mono">.json</code> file so anyone can import your exact catalog in one tap.
+                        Export all <strong>{categories.length} categories</strong>, <strong>{products.length} products</strong>, <strong>photo links</strong>, and <strong>UPC barcodes (short &amp; 12-digit)</strong> into a single <code className="font-mono">.json</code> file so anyone can import your exact catalog in one tap.
                       </p>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Minus, Plus, Package, ScanBarcode, Pencil, ArrowLeft } from 'lucide-react';
 import type { Product } from '../data/products';
+import { getBarcodeFormatLabel } from '../utils/inventoryLogic';
 import { BarcodeSVG } from './BarcodeSVG';
 
 interface BarcodeLightboxModalProps {
@@ -99,7 +100,7 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
             />
           </div>
           <div className="mt-1 font-mono text-xs font-semibold text-slate-600 tracking-widest">
-            UPC-A / {product.upc}
+            {getBarcodeFormatLabel(product.upc)} / {product.upc}
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
-import { isValidUpcA } from '../utils/inventoryLogic';
+import { isValidEan8, isValidUpcA } from '../utils/inventoryLogic';
 
 interface BarcodeSVGProps {
   upc: string;
@@ -25,10 +25,17 @@ export const BarcodeSVG: React.FC<BarcodeSVGProps> = ({
   useEffect(() => {
     if (!svgRef.current || !cleanUpc) return;
 
-    const useUpcFormat = isValidUpcA(cleanUpc);
+    const preferredFormat = isValidUpcA(cleanUpc)
+      ? 'UPC'
+      : isValidEan8(cleanUpc)
+      ? 'EAN8'
+      : /^\d{13}$/.test(cleanUpc)
+      ? 'EAN13'
+      : 'CODE128';
+
     try {
       JsBarcode(svgRef.current, cleanUpc, {
-        format: useUpcFormat ? 'UPC' : 'CODE128',
+        format: preferredFormat,
         lineColor: '#020617',
         background: '#ffffff',
         width,

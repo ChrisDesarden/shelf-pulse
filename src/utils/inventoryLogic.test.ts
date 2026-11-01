@@ -9,6 +9,11 @@ import {
   getCountedProducts,
   computeUpcCheckDigit,
   isValidUpcA,
+  computeEan8CheckDigit,
+  isValidEan8,
+  computeUpcE8,
+  isValidUpcE,
+  getBarcodeFormatLabel,
   mergeCategories,
   renameCategoryInCatalog,
   deleteCategoryInCatalog,
@@ -18,6 +23,8 @@ import {
   parseCompleteBackup,
   normalizeScannedUpc,
   encodeUpcABits,
+  encodeEan8Bits,
+  encodeUpcEBits,
   decodeUpcFromLuminanceRow,
 } from './inventoryLogic';
 
@@ -190,40 +197,93 @@ test('formatInventoryCsv outputs valid CSV rows only for counted products', () =
   assert.match(lines[2], /^"Oct 31, 2026",Cooler \/ Dairy,Barista Edition Oat Milk \(12x32oz\),085269008059,Case,8$/);
 });
 
-test('serializeCompleteBackup and parseCompleteBackup round-trip categories, products, photo links, UPCs, and quantities', () => {
+test('serializeCompleteBackup and parseCompleteBackup round-trip categories, products (including short UPCs), photo links, and quantities', () => {
   const customCategories = ['Walk-In Freezer', 'Beverages', 'Dry Goods', 'Cooler / Dairy', 'Supplies'];
-  const quantities = { 'bev-01': 7, 'col-02': 3 };
-  const serialized = serializeCompleteBackup(INITIAL_PRODUCTS, customCategories, quantities);
+  const productsWithShortUpc = [
+    ...INITIAL_PRODUCTS,
+    {
+      id: 'short-01',
+      name: 'Espresso Shot Can (Mini)',
+      category: 'Beverages',
+      upc: '04210009', // 8-digit UPC-E
+      image: '',
+      unit: 'Can',
+    },
+    {
+      id: 'short-02',
+      name: 'Organic Bananas PLU',
+      category: 'Dry Goods',
+      upc: '94011', // 5-digit PLU
+      image: '',
+      unit: 'Bunch',
+    },
+  ];
+  const quantities = { 'bev-01': 7, 'short-01': 12 };
+  const serialized = serializeCompleteBackup(productsWithShortUpc, customCategories, quantities);
   const parsed = parseCompleteBackup(serialized);
 
   assert.deepEqual(parsed.categories, customCategories);
-  assert.equal(parsed.products.length, 12);
-  assert.equal(parsed.products[0].upc, INITIAL_PRODUCTS[0].upc);
-  assert.equal(parsed.products[0].image, INITIAL_PRODUCTS[0].image);
+  assert.equal(parsed.products.length, 14);
+  assert.equal(parsed.products[12].upc, '04210009');
+  assert.equal(parsed.products[13].upc, '94011');
   assert.deepEqual(parsed.quantities, quantities);
 });
 
-test('normalizeScannedUpc normalizes UPC-A, EAN-13 with leading zero, and 11-digit strings', () => {
+test('normalizeScannedUpc preserves smaller UPCs (4-digit PLU, 6-digit, 8-digit UPC-E/EAN-8) as well as 12-digit UPC-A', () => {
+  assert.equal(normalizeScannedUpc('4011'), '4011');
+  assert.equal(normalizeScannedUpc('123456'), '123456');
+  assert.equal(normalizeScannedUpc('04210009'), '04210009');
+  assert.equal(normalizeScannedUpc('96385074'), '96385074');
   assert.equal(normalizeScannedUpc('012000161155'), '012000161155');
   assert.equal(normalizeScannedUpc('0012000161155'), '012000161155');
   assert.equal(normalizeScannedUpc('01200016115'), '012000161155');
   assert.equal(normalizeScannedUpc(''), null);
 });
 
-test('encodeUpcABits and decodeUpcFromLuminanceRow decode all 12 product UPCs in both forward and upside-down orientations', () => {
+test('getBarcodeFormatLabel identifies UPC-A, UPC-E, EAN-8, and short UPCs accurately', () => {
+  const upcE8 = computeUpcE8('421000');
+  const ean8 = computeEan8CheckDigit('9638507');
+  assert.equal(isValidUpcE(upcE8), true);
+  assert.equal(isValidEan8(ean8), true);
+  assert.equal(getBarcodeFormatLabel('012000161155'), 'UPC-A (12-Digit)');
+  assert.equal(getBarcodeFormatLabel(upcE8), 'UPC-E (8-Digit)');
+  assert.equal(getBarcodeFormatLabel(ean8), 'EAN-8 (8-Digit)');
+  assert.equal(getBarcodeFormatLabel('123456'), 'UPC-E / Short (6-Digit)');
+  assert.equal(getBarcodeFormatLabel('4011'), 'Short UPC (4-Digit)');
+});
+
+test('encodeUpcABits, encodeEan8Bits, encodeUpcEBits and decodeUpcFromLuminanceRow decode 12-digit UPC-A, 8-digit EAN-8, and 8-digit UPC-E in both orientations', () => {
   for (const product of INITIAL_PRODUCTS) {
     const bits = encodeUpcABits(product.upc);
-    // Simulate a 4x scaled camera scanline (4 pixels per barcode module, dark = 20, light = 240)
     const luminance: number[] = [];
     for (const bit of bits) {
       const lum = bit === '1' ? 20 : 240;
       luminance.push(lum, lum, lum, lum);
     }
 
-    const decodedForward = decodeUpcFromLuminanceRow(luminance);
-    assert.equal(decodedForward, product.upc, `Failed forward decode for ${product.name}`);
-
-    const decodedReversed = decodeUpcFromLuminanceRow([...luminance].reverse());
-    assert.equal(decodedReversed, product.upc, `Failed upside-down decode for ${product.name}`);
+    assert.equal(decodeUpcFromLuminanceRow(luminance), product.upc);
+    assert.equal(decodeUpcFromLuminanceRow([...luminance].reverse()), product.upc);
   }
+
+  // Verify 8-digit EAN-8 scanline decoding
+  const sampleEan8 = computeEan8CheckDigit('9638507');
+  const ean8Bits = encodeEan8Bits(sampleEan8);
+  const ean8Lum: number[] = [];
+  for (const bit of ean8Bits) {
+    const lum = bit === '1' ? 15 : 245;
+    ean8Lum.push(lum, lum, lum, lum);
+  }
+  assert.equal(decodeUpcFromLuminanceRow(ean8Lum), sampleEan8);
+  assert.equal(decodeUpcFromLuminanceRow([...ean8Lum].reverse()), sampleEan8);
+
+  // Verify 8-digit UPC-E scanline decoding
+  const sampleUpcE = computeUpcE8('425261');
+  const upcEBits = encodeUpcEBits(sampleUpcE);
+  const upcELum: number[] = [];
+  for (const bit of upcEBits) {
+    const lum = bit === '1' ? 15 : 245;
+    upcELum.push(lum, lum, lum, lum);
+  }
+  assert.equal(decodeUpcFromLuminanceRow(upcELum), sampleUpcE);
+  assert.equal(decodeUpcFromLuminanceRow([...upcELum].reverse()), sampleUpcE);
 });

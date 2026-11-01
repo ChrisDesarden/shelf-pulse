@@ -570,7 +570,7 @@ export default function App() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search name or 12-digit UPC..."
+                  placeholder="Search name or UPC barcode..."
                   aria-label="Search products by name or UPC"
                   className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-xl text-sm transition focus:outline-2 focus:outline-emerald-500 ${
                     highContrast

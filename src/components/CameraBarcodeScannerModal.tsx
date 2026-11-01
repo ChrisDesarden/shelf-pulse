@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import {
   computeUpcCheckDigit,
+  computeUpcE8,
   decodeUpcFromLuminanceRow,
+  getBarcodeFormatLabel,
   normalizeScannedUpc,
 } from '../utils/inventoryLogic';
 
@@ -105,7 +107,17 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
     if (typeof window !== 'undefined' && window.BarcodeDetector) {
       try {
         const detector = new window.BarcodeDetector({
-          formats: ['upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128'],
+          formats: [
+            'upc_a',
+            'upc_e',
+            'ean_13',
+            'ean_8',
+            'code_128',
+            'code_39',
+            'code_93',
+            'itf',
+            'codabar',
+          ],
         });
         const results = await detector.detect(source);
         if (results && results.length > 0) {
@@ -247,11 +259,11 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
       const code = await decodeFrameSource(img, img.naturalWidth, img.naturalHeight);
       URL.revokeObjectURL(imgUrl);
       if (code) {
-        setPhotoScanStatus(`Detected UPC ${code}!`);
+        setPhotoScanStatus(`Detected ${getBarcodeFormatLabel(code)}: ${code}!`);
         triggerDetectedSuccess(code);
       } else {
         setPhotoScanStatus(
-          'Could not detect a clear 12-digit UPC in that image. Try moving closer to the barcode.'
+          'Could not detect a clear barcode (UPC-E, EAN-8, or UPC-A) in that image. Try moving closer to the barcode.'
         );
       }
     };
@@ -269,6 +281,12 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
       Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join('');
     const validUpc = computeUpcCheckDigit(randomEleven);
     triggerDetectedSuccess(validUpc);
+  };
+
+  const handleSimulateShortUpcScan = () => {
+    const randomSix = Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('');
+    const validUpcE = computeUpcE8(randomSix);
+    triggerDetectedSuccess(validUpcE);
   };
 
   return (
@@ -339,7 +357,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
                 <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#10b981]" />
               </div>
               <span className="mt-2.5 px-2.5 py-1 rounded-full bg-slate-950/85 text-[11px] font-semibold text-emerald-300 border border-emerald-500/40">
-                Align 12-digit UPC barcode inside the green box
+                Align barcode (Short UPC, UPC-E, EAN-8, or 12-Digit) inside box
               </span>
             </div>
           )}
@@ -413,17 +431,28 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
           </div>
         )}
 
-        {/* Quick Test Scan & Close Footer */}
-        <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={handleSimulateSampleScan}
-            data-testid="simulate-barcode-scan-btn"
-            className="min-h-[40px] px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none"
-          >
-            <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>Test Sample Scan</span>
-          </button>
+        {/* Quick Test Scan (8-Digit & 12-Digit) & Close Footer */}
+        <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleSimulateShortUpcScan}
+              data-testid="simulate-short-barcode-scan-btn"
+              className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>Test 8-Digit</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSimulateSampleScan}
+              data-testid="simulate-barcode-scan-btn"
+              className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>Test 12-Digit</span>
+            </button>
+          </div>
 
           <button
             type="button"
