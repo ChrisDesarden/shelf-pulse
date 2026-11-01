@@ -205,6 +205,28 @@ export function isValidUpcA(upc: string): boolean {
 }
 
 /**
+ * Normalizes a scanned barcode string (UPC-A 12-digit, EAN-13 starting with 0, or 11-digit)
+ * into a clean 12-digit numeric UPC string.
+ */
+export function normalizeScannedUpc(rawCode: string): string | null {
+  const digits = String(rawCode || '').replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 13 && digits.startsWith('0')) {
+    return digits.slice(1);
+  }
+  if (digits.length === 12) {
+    return digits;
+  }
+  if (digits.length === 11) {
+    return computeUpcCheckDigit(digits);
+  }
+  if (digits.length >= 6 && digits.length <= 14) {
+    return digits.slice(0, 12).padStart(12, '0');
+  }
+  return null;
+}
+
+/**
  * Merges explicitly stored categories with any categories present on products,
  * preserving the explicit category order and appending any unseen product categories.
  */
@@ -236,7 +258,6 @@ export function mergeCategories(
 
 /**
  * Renames a category across both the category list and all products belonging to that category.
- * IfnewName already exists (case-insensitive match to another category), merges them cleanly.
  */
 export function renameCategoryInCatalog(
   categories: string[],
@@ -361,4 +382,407 @@ export function formatInventoryCsv(
   return rows.join('\n');
 }
 
+/**
+ * Complete single-file backup payload containing categories, products (with photo links & UPCs),
+ * and daily quantities so teammates can share and import identical inventory setups.
+ */
+export interface CompleteInventoryBackup {
+  appName: string;
+  schemaVersion: number;
+  exportedAt: string;
+  categories: string[];
+  products: Product[];
+  quantities: QuantityMap;
+}
 
+export function serializeCompleteBackup(
+  products: Product[],
+  categories: string[],
+  quantities: QuantityMap = {}
+): string {
+  const payload: CompleteInventoryBackup = {
+    appName: 'Daily Inventory',
+    schemaVersion: 2,
+    exportedAt: new Date().toISOString(),
+    categories: mergeCategories(categories, products),
+    products: products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      upc: p.upc,
+      image: p.image || '',
+      unit: p.unit || 'Each',
+    })),
+    quantities,
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+export function parseCompleteBackup(jsonString: string): {
+  products: Product[];
+  categories: string[];
+  quantities?: QuantityMap;
+} {
+  const parsed = JSON.parse(jsonString);
+  const rawProducts = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.products)
+    ? parsed.products
+    : null;
+
+  if (!rawProducts || rawProducts.length === 0) {
+    throw new Error('Backup file must contain a non-empty list of products.');
+  }
+
+  const validatedProducts: Product[] = rawProducts.map(
+    (item: Record<string, unknown>, idx: number) => {
+      if (!item || typeof item.name !== 'string' || !item.name.trim()) {
+        throw new Error(`Product at index ${idx} is missing a valid "name".`);
+      }
+      const rawUpc = String(item.upc || '').replace(/\D/g, '');
+      const cleanUpc =
+        rawUpc.length === 12
+          ? rawUpc
+          : computeUpcCheckDigit(rawUpc.padStart(11, '0'));
+      return {
+        id: String(item.id || `imp-${idx}-${Date.now()}`),
+        name: item.name.trim(),
+        category: String(item.category || 'General').trim(),
+        upc: cleanUpc,
+        image: String(item.image || ''),
+        unit: item.unit ? String(item.unit).trim() : 'Each',
+      };
+    }
+  );
+
+  const rawCategories = Array.isArray(parsed?.categories)
+    ? parsed.categories.map((c: unknown) => String(c).trim()).filter(Boolean)
+    : [];
+
+  const mergedCats = mergeCategories(rawCategories, validatedProducts);
+
+  let validatedQuantities: QuantityMap | undefined;
+  if (parsed?.quantities && typeof parsed.quantities === 'object' && !Array.isArray(parsed.quantities)) {
+    validatedQuantities = {};
+    for (const [k, v] of Object.entries(parsed.quantities as Record<string, unknown>)) {
+      const n = Math.max(0, Math.floor(Number(v) || 0));
+      if (n > 0) {
+        validatedQuantities[k] = n;
+      }
+    }
+  }
+
+  return {
+    products: validatedProducts,
+    categories: mergedCats,
+    quantities: validatedQuantities,
+  };
+}
+
+/**
+ * 1D UPC-A / EAN-13 bit tables for pure TypeScript scanline barcode decoding & encoding.
+ * L-codes (left odd parity), G-codes (left even parity for EAN-13), R-codes (right).
+ */
+const UPC_L_CODES = [
+  '0001101',
+  '0011001',
+  '0010011',
+  '0111101',
+  '0100011',
+  '0110001',
+  '0101111',
+  '0111011',
+  '0110111',
+  '0001011',
+];
+
+const UPC_G_CODES = [
+  '0100111',
+  '0110011',
+  '0011011',
+  '0100001',
+  '0011101',
+  '0111001',
+  '0000101',
+  '0010001',
+  '0001001',
+  '0010111',
+];
+
+const UPC_R_CODES = [
+  '1110010',
+  '1100110',
+  '1101100',
+  '1000010',
+  '1011100',
+  '1001110',
+  '1010000',
+  '1000100',
+  '1001000',
+  '1110100',
+];
+
+const EAN13_PARITY_TABLE: Record<string, number> = {
+  LLLLLL: 0,
+  LLGLGG: 1,
+  LLGGLG: 2,
+  LLGGGL: 3,
+  LGLLGG: 4,
+  LGGLLG: 5,
+  LGGGLL: 6,
+  LGLGLG: 7,
+  LGLGGL: 8,
+  LGGLGL: 9,
+};
+
+/**
+ * Encodes a 12-digit UPC-A string into its 95-module binary bar string ('1' = dark bar, '0' = light space),
+ * surrounded by 9-module quiet zones. Useful for testing and verification.
+ */
+export function encodeUpcABits(upc: string): string {
+  const normalized =
+    upc.replace(/\D/g, '').length === 12
+      ? upc.replace(/\D/g, '')
+      : computeUpcCheckDigit(upc);
+  let bits = '000000000101'; // Quiet zone + start guard
+  for (let i = 0; i < 6; i++) {
+    bits += UPC_L_CODES[Number(normalized[i])];
+  }
+  bits += '01010'; // Center guard
+  for (let i = 6; i < 12; i++) {
+    bits += UPC_R_CODES[Number(normalized[i])];
+  }
+  bits += '101000000000'; // End guard + quiet zone
+  return bits;
+}
+
+function bitStringToRunLengths(bits: string): number[] {
+  const runs: number[] = [];
+  let current = bits[0];
+  let count = 0;
+  for (let i = 0; i < bits.length; i++) {
+    if (bits[i] === current) {
+      count++;
+    } else {
+      runs.push(count);
+      current = bits[i];
+      count = 1;
+    }
+  }
+  if (count > 0) runs.push(count);
+  return runs;
+}
+
+const L_RUNS = UPC_L_CODES.map(bitStringToRunLengths);
+const G_RUNS = UPC_G_CODES.map(bitStringToRunLengths);
+const R_RUNS = UPC_R_CODES.map(bitStringToRunLengths);
+
+function matchFourRunsToDigit(
+  r0: number,
+  r1: number,
+  r2: number,
+  r3: number,
+  mode: 'left' | 'right'
+): { digit: number; parity: 'L' | 'G' | 'R'; error: number } | null {
+  const total = r0 + r1 + r2 + r3;
+  if (total <= 0) return null;
+  const n0 = (r0 / total) * 7;
+  const n1 = (r1 / total) * 7;
+  const n2 = (r2 / total) * 7;
+  const n3 = (r3 / total) * 7;
+
+  let bestDigit = -1;
+  let bestParity: 'L' | 'G' | 'R' = mode === 'left' ? 'L' : 'R';
+  let bestError = Infinity;
+
+  if (mode === 'left') {
+    for (let d = 0; d < 10; d++) {
+      const pL = L_RUNS[d];
+      const errL =
+        Math.abs(n0 - pL[0]) +
+        Math.abs(n1 - pL[1]) +
+        Math.abs(n2 - pL[2]) +
+        Math.abs(n3 - pL[3]);
+      if (errL < bestError) {
+        bestError = errL;
+        bestDigit = d;
+        bestParity = 'L';
+      }
+
+      const pG = G_RUNS[d];
+      const errG =
+        Math.abs(n0 - pG[0]) +
+        Math.abs(n1 - pG[1]) +
+        Math.abs(n2 - pG[2]) +
+        Math.abs(n3 - pG[3]);
+      if (errG < bestError) {
+        bestError = errG;
+        bestDigit = d;
+        bestParity = 'G';
+      }
+    }
+  } else {
+    for (let d = 0; d < 10; d++) {
+      const pR = R_RUNS[d];
+      const errR =
+        Math.abs(n0 - pR[0]) +
+        Math.abs(n1 - pR[1]) +
+        Math.abs(n2 - pR[2]) +
+        Math.abs(n3 - pR[3]);
+      if (errR < bestError) {
+        bestError = errR;
+        bestDigit = d;
+        bestParity = 'R';
+      }
+    }
+  }
+
+  if (bestDigit === -1 || bestError > 2.2) return null;
+  return { digit: bestDigit, parity: bestParity, error: bestError };
+}
+
+function tryDecodeRuns(
+  runs: Array<{ bit: 0 | 1; len: number }>
+): string | null {
+  if (runs.length < 59) return null;
+
+  for (let s = 0; s <= runs.length - 59; s++) {
+    if (runs[s].bit !== 1) continue;
+
+    // Start guard: 101 (runs[s], runs[s+1], runs[s+2])
+    const gStart = (runs[s].len + runs[s + 1].len + runs[s + 2].len) / 3;
+    if (gStart <= 0) continue;
+    if (
+      Math.abs(runs[s].len - gStart) > gStart * 0.85 ||
+      Math.abs(runs[s + 1].len - gStart) > gStart * 0.85 ||
+      Math.abs(runs[s + 2].len - gStart) > gStart * 0.85
+    ) {
+      continue;
+    }
+
+    // Center guard: 01010 at s + 27 .. s + 31
+    const cIdx = s + 27;
+    const gCenter =
+      (runs[cIdx].len +
+        runs[cIdx + 1].len +
+        runs[cIdx + 2].len +
+        runs[cIdx + 3].len +
+        runs[cIdx + 4].len) /
+      5;
+    if (
+      Math.abs(runs[cIdx + 1].len - gCenter) > gCenter * 0.9 ||
+      Math.abs(runs[cIdx + 2].len - gCenter) > gCenter * 0.9 ||
+      Math.abs(runs[cIdx + 3].len - gCenter) > gCenter * 0.9
+    ) {
+      continue;
+    }
+
+    let leftDigits = '';
+    let paritySeq = '';
+    let valid = true;
+
+    for (let d = 0; d < 6; d++) {
+      const idx = s + 3 + d * 4;
+      const m = matchFourRunsToDigit(
+        runs[idx].len,
+        runs[idx + 1].len,
+        runs[idx + 2].len,
+        runs[idx + 3].len,
+        'left'
+      );
+      if (!m) {
+        valid = false;
+        break;
+      }
+      leftDigits += String(m.digit);
+      paritySeq += m.parity;
+    }
+    if (!valid) continue;
+
+    let rightDigits = '';
+    for (let d = 0; d < 6; d++) {
+      const idx = s + 32 + d * 4;
+      const m = matchFourRunsToDigit(
+        runs[idx].len,
+        runs[idx + 1].len,
+        runs[idx + 2].len,
+        runs[idx + 3].len,
+        'right'
+      );
+      if (!m) {
+        valid = false;
+        break;
+      }
+      rightDigits += String(m.digit);
+    }
+    if (!valid) continue;
+
+    const firstDigit = EAN13_PARITY_TABLE[paritySeq];
+    if (firstDigit === undefined) continue;
+
+    const twelveDigits = `${leftDigits}${rightDigits}`;
+    if (firstDigit === 0) {
+      if (isValidUpcA(twelveDigits)) {
+        return twelveDigits;
+      }
+    } else {
+      // Verify EAN-13 modulo-10 check digit
+      const ean13 = `${firstDigit}${twelveDigits}`;
+      let sum = 0;
+      for (let i = 0; i < 12; i++) {
+        sum += Number(ean13[i]) * (i % 2 === 0 ? 1 : 3);
+      }
+      const check = (10 - (sum % 10)) % 10;
+      if (check === Number(ean13[12])) {
+        return twelveDigits;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Decodes a 12-digit UPC-A barcode from a 1D luminance array (0 = black, 255 = white).
+ * Automatically handles both forward and upside-down barcode orientations.
+ */
+export function decodeUpcFromLuminanceRow(luminance: ArrayLike<number>): string | null {
+  const len = luminance.length;
+  if (len < 95) return null;
+
+  let minLum = 255;
+  let maxLum = 0;
+  for (let i = 0; i < len; i++) {
+    const v = luminance[i];
+    if (v < minLum) minLum = v;
+    if (v > maxLum) maxLum = v;
+  }
+
+  if (maxLum - minLum < 35) return null;
+  const threshold = (minLum + maxLum) / 2;
+
+  const extractRuns = (reverse: boolean): Array<{ bit: 0 | 1; len: number }> => {
+    const runs: Array<{ bit: 0 | 1; len: number }> = [];
+    let currentBit: 0 | 1 =
+      (reverse ? luminance[len - 1] : luminance[0]) < threshold ? 1 : 0;
+    let count = 0;
+
+    for (let i = 0; i < len; i++) {
+      const val = reverse ? luminance[len - 1 - i] : luminance[i];
+      const bit: 0 | 1 = val < threshold ? 1 : 0;
+      if (bit === currentBit) {
+        count++;
+      } else {
+        runs.push({ bit: currentBit, len: count });
+        currentBit = bit;
+        count = 1;
+      }
+    }
+    if (count > 0) {
+      runs.push({ bit: currentBit, len: count });
+    }
+    return runs;
+  };
+
+  return tryDecodeRuns(extractRuns(false)) || tryDecodeRuns(extractRuns(true));
+}

@@ -14,6 +14,11 @@ import {
   deleteCategoryInCatalog,
   updateProductInCatalog,
   formatInventoryCsv,
+  serializeCompleteBackup,
+  parseCompleteBackup,
+  normalizeScannedUpc,
+  encodeUpcABits,
+  decodeUpcFromLuminanceRow,
 } from './inventoryLogic';
 
 test('INITIAL_PRODUCTS has 12 realistic items across 4 categories with valid 12-digit UPCs', () => {
@@ -185,5 +190,40 @@ test('formatInventoryCsv outputs valid CSV rows only for counted products', () =
   assert.match(lines[2], /^"Oct 31, 2026",Cooler \/ Dairy,Barista Edition Oat Milk \(12x32oz\),085269008059,Case,8$/);
 });
 
+test('serializeCompleteBackup and parseCompleteBackup round-trip categories, products, photo links, UPCs, and quantities', () => {
+  const customCategories = ['Walk-In Freezer', 'Beverages', 'Dry Goods', 'Cooler / Dairy', 'Supplies'];
+  const quantities = { 'bev-01': 7, 'col-02': 3 };
+  const serialized = serializeCompleteBackup(INITIAL_PRODUCTS, customCategories, quantities);
+  const parsed = parseCompleteBackup(serialized);
 
+  assert.deepEqual(parsed.categories, customCategories);
+  assert.equal(parsed.products.length, 12);
+  assert.equal(parsed.products[0].upc, INITIAL_PRODUCTS[0].upc);
+  assert.equal(parsed.products[0].image, INITIAL_PRODUCTS[0].image);
+  assert.deepEqual(parsed.quantities, quantities);
+});
 
+test('normalizeScannedUpc normalizes UPC-A, EAN-13 with leading zero, and 11-digit strings', () => {
+  assert.equal(normalizeScannedUpc('012000161155'), '012000161155');
+  assert.equal(normalizeScannedUpc('0012000161155'), '012000161155');
+  assert.equal(normalizeScannedUpc('01200016115'), '012000161155');
+  assert.equal(normalizeScannedUpc(''), null);
+});
+
+test('encodeUpcABits and decodeUpcFromLuminanceRow decode all 12 product UPCs in both forward and upside-down orientations', () => {
+  for (const product of INITIAL_PRODUCTS) {
+    const bits = encodeUpcABits(product.upc);
+    // Simulate a 4x scaled camera scanline (4 pixels per barcode module, dark = 20, light = 240)
+    const luminance: number[] = [];
+    for (const bit of bits) {
+      const lum = bit === '1' ? 20 : 240;
+      luminance.push(lum, lum, lum, lum);
+    }
+
+    const decodedForward = decodeUpcFromLuminanceRow(luminance);
+    assert.equal(decodedForward, product.upc, `Failed forward decode for ${product.name}`);
+
+    const decodedReversed = decodeUpcFromLuminanceRow([...luminance].reverse());
+    assert.equal(decodedReversed, product.upc, `Failed upside-down decode for ${product.name}`);
+  }
+});

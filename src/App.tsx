@@ -12,6 +12,9 @@ import {
   FolderCog,
   Layout,
   Globe,
+  Download,
+  Upload,
+  Camera,
 } from 'lucide-react';
 import { INITIAL_CATEGORIES, INITIAL_PRODUCTS, type Product } from './data/products';
 import {
@@ -20,7 +23,9 @@ import {
   filterProducts,
   groupProductsByCategory,
   mergeCategories,
+  parseCompleteBackup,
   renameCategoryInCatalog,
+  serializeCompleteBackup,
   updateProductInCatalog,
   type QuantityMap,
 } from './utils/inventoryLogic';
@@ -32,6 +37,7 @@ import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { WebsiteShowcaseView } from './components/WebsiteShowcaseView';
 import { GitHubDeployModal } from './components/GitHubDeployModal';
+import { CameraBarcodeScannerModal } from './components/CameraBarcodeScannerModal';
 
 const STORAGE_KEYS = {
   CATALOG: 'daily_inventory_catalog_v1',
@@ -120,7 +126,6 @@ export default function App() {
   });
 
   // Track whether viewport is wide enough (>= 1024px) for the desktop Website Showcase split view.
-  // On real mobile/tablet screens (< 1024px), always render the native full-bleed mobile app so a phone never renders a phone bezel inside itself.
   const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : false
   );
@@ -140,14 +145,27 @@ export default function App() {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [manageModalTab, setManageModalTab] = useState<CatalogModalTab>('products');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [scannedUpcForCreate, setScannedUpcForCreate] = useState<string | null>(null);
+  const [isMainScannerOpen, setIsMainScannerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+  const [bannerFeedback, setBannerFeedback] = useState<string | null>(null);
+
+  const quickImportInputRef = useRef<HTMLInputElement | null>(null);
+
+  const showBannerFeedback = (msg: string) => {
+    setBannerFeedback(msg);
+    window.setTimeout(() => {
+      setBannerFeedback((prev) => (prev === msg ? null : prev));
+    }, 3500);
+  };
 
   // Synchronize open modals and SummaryView with browser history so pressing
   // the hardware/gesture "Back" button on Android or iOS closes the active modal/view
   // instead of exiting the web page.
   const hasOverlayOpen =
     isManageModalOpen ||
+    isMainScannerOpen ||
     Boolean(lightboxProduct) ||
     isResetConfirmOpen ||
     isGitHubModalOpen ||
@@ -173,6 +191,7 @@ export default function App() {
     const handlePopState = () => {
       if (
         isManageModalOpen ||
+        isMainScannerOpen ||
         lightboxProduct ||
         isResetConfirmOpen ||
         isGitHubModalOpen ||
@@ -181,7 +200,9 @@ export default function App() {
         closingFromPopStateRef.current = true;
         historyPushedRef.current = false;
         setIsManageModalOpen(false);
+        setIsMainScannerOpen(false);
         setEditingProduct(null);
+        setScannedUpcForCreate(null);
         setLightboxProduct(null);
         setIsResetConfirmOpen(false);
         setIsGitHubModalOpen(false);
@@ -191,9 +212,12 @@ export default function App() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (isManageModalOpen) {
+        if (isMainScannerOpen) {
+          setIsMainScannerOpen(false);
+        } else if (isManageModalOpen) {
           setIsManageModalOpen(false);
           setEditingProduct(null);
+          setScannedUpcForCreate(null);
         } else if (lightboxProduct) {
           setLightboxProduct(null);
         } else if (isResetConfirmOpen) {
@@ -212,6 +236,7 @@ export default function App() {
     };
   }, [
     isManageModalOpen,
+    isMainScannerOpen,
     lightboxProduct,
     isResetConfirmOpen,
     isGitHubModalOpen,
@@ -324,20 +349,80 @@ export default function App() {
 
   const handleOpenManageProducts = () => {
     setEditingProduct(null);
+    setScannedUpcForCreate(null);
     setManageModalTab('products');
     setIsManageModalOpen(true);
   };
 
   const handleOpenManageCategories = () => {
     setEditingProduct(null);
+    setScannedUpcForCreate(null);
     setManageModalTab('categories');
     setIsManageModalOpen(true);
   };
 
   const handleOpenEditProduct = (product: Product) => {
     setEditingProduct(product);
+    setScannedUpcForCreate(null);
     setManageModalTab('products');
     setIsManageModalOpen(true);
+  };
+
+  // Direct 1-tap Export Complete Backup File (.json) from the main screen
+  const handleDirectExportBackupFile = () => {
+    const serialized = serializeCompleteBackup(products, categories, quantities);
+    const filename = `daily-inventory-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const blob = new Blob([serialized], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showBannerFeedback(
+      `Exported "${filename}" (${products.length} products, ${categories.length} categories, photos & barcodes).`
+    );
+  };
+
+  // Direct 1-tap Import Complete Backup File (.json) from the main screen
+  const handleQuickImportFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const result = parseCompleteBackup(String(reader.result || ''));
+        handleImportCatalog(result.products, result.categories, result.quantities);
+        showBannerFeedback(
+          `Imported ${result.products.length} products and ${result.categories.length} categories from "${file.name}"!`
+        );
+      } catch (err) {
+        showBannerFeedback(
+          err instanceof Error ? `Import Error: ${err.message}` : 'Invalid backup file.'
+        );
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // When scanning a barcode from the main toolbar camera button:
+  // If product exists in catalog, filter to it; otherwise open Create Product with that UPC pre-filled!
+  const handleMainScannerDetected = (scannedUpc: string) => {
+    setIsMainScannerOpen(false);
+    const existing = products.find((p) => p.upc === scannedUpc);
+    if (existing) {
+      setSelectedCategory('All');
+      setSearchQuery(scannedUpc);
+      showBannerFeedback(`Found "${existing.name}" (${scannedUpc}) in catalog.`);
+    } else {
+      setEditingProduct(null);
+      setScannedUpcForCreate(scannedUpc);
+      setManageModalTab('products');
+      setIsManageModalOpen(true);
+    }
   };
 
   const handleAddProduct = (newProduct: Product) => {
@@ -393,13 +478,17 @@ export default function App() {
 
   const handleImportCatalog = (
     importedProducts: Product[],
-    importedCategories?: string[]
+    importedCategories?: string[],
+    importedQuantities?: QuantityMap
   ) => {
     setProducts(importedProducts);
     if (importedCategories && importedCategories.length > 0) {
       setStoredCategories(importedCategories);
     } else {
       setStoredCategories(mergeCategories([], importedProducts));
+    }
+    if (importedQuantities && Object.keys(importedQuantities).length > 0) {
+      setQuantities(importedQuantities);
     }
     setSelectedCategory('All');
   };
@@ -463,7 +552,7 @@ export default function App() {
 
     return (
       <>
-        {/* Search & Category Filter Workspace Toolbar */}
+        {/* Search, Camera Barcode Scan, & Category Filter Workspace Toolbar */}
         <section
           aria-label="Search and Category Filters"
           className={`border-b ${
@@ -473,34 +562,51 @@ export default function App() {
           }`}
         >
           <div className={`${insidePhoneFrame ? 'px-3' : 'max-w-7xl mx-auto px-3 sm:px-6'} py-3 space-y-2.5`}>
-            {/* Real-time Search Bar */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by product name or 12-digit UPC barcode..."
-                aria-label="Search products by name or UPC"
-                className={`w-full min-h-[44px] pl-10 pr-11 py-2 rounded-xl text-sm transition focus:outline-2 focus:outline-emerald-500 ${
+            {/* Real-time Search Bar + Camera Scan Button */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search name or 12-digit UPC..."
+                  aria-label="Search products by name or UPC"
+                  className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-xl text-sm transition focus:outline-2 focus:outline-emerald-500 ${
+                    highContrast
+                      ? 'bg-black text-white border-2 border-white placeholder:text-slate-400'
+                      : 'bg-slate-100/90 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 placeholder:text-slate-400'
+                  }`}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[34px] min-h-[34px] rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 touch-manipulation select-none"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsMainScannerOpen(true)}
+                aria-label="Scan barcode with camera to find or add product"
+                title="Scan UPC barcode with camera"
+                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
-                    ? 'bg-black text-white border-2 border-white placeholder:text-slate-400'
-                    : 'bg-slate-100/90 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 placeholder:text-slate-400'
+                    ? 'bg-emerald-400 text-slate-950 border-2 border-white'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
                 }`}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 touch-manipulation select-none"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+              >
+                <Camera className="w-4 h-4 shrink-0" />
+                <span>Scan UPC</span>
+              </button>
             </div>
 
-            {/* Horizontal Scrollable Category Tabs with Active Count Indicator + Quick Edit Categories Button */}
+            {/* Horizontal Scrollable Category Tabs + Quick Edit Categories + Export/Import Data File Buttons */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               <div
                 role="tablist"
@@ -565,9 +671,58 @@ export default function App() {
                 <FolderCog className="w-3.5 h-3.5 shrink-0" />
                 <span>Edit Categories</span>
               </button>
+
+              <button
+                type="button"
+                onClick={handleDirectExportBackupFile}
+                aria-label="Export all data, categories, products, photos, and barcodes to a single file"
+                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+                  highContrast
+                    ? 'bg-slate-900 text-emerald-300 border-emerald-400'
+                    : 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                }`}
+              >
+                <Download className="w-3.5 h-3.5 shrink-0" />
+                <span>Export Data</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => quickImportInputRef.current?.click()}
+                aria-label="Import data file from another device"
+                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+                  highContrast
+                    ? 'bg-slate-900 text-white border-white'
+                    : 'bg-slate-100 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <Upload className="w-3.5 h-3.5 shrink-0" />
+                <span>Import Data</span>
+              </button>
             </div>
           </div>
         </section>
+
+        {/* Banner Feedback Toast for Quick Export/Import/Scan */}
+        {bannerFeedback && (
+          <div className={`${insidePhoneFrame ? 'px-3' : 'max-w-7xl mx-auto px-3 sm:px-6'} pt-3`}>
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-xl bg-emerald-600 text-white px-3.5 py-2.5 text-xs font-bold shadow-sm flex items-center justify-between gap-2"
+            >
+              <span>{bannerFeedback}</span>
+              <button
+                type="button"
+                onClick={() => setBannerFeedback(null)}
+                aria-label="Dismiss notification"
+                className="p-1 rounded-lg hover:bg-emerald-500"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Product Counting List */}
         <main className={`${insidePhoneFrame ? 'px-3 pb-20' : 'max-w-7xl mx-auto px-3 sm:px-6 pb-6'} pt-4`}>
@@ -594,7 +749,13 @@ export default function App() {
                 )}
                 <button
                   type="button"
-                  onClick={handleOpenManageProducts}
+                  onClick={() => {
+                    const digits = searchQuery.replace(/\D/g, '');
+                    setEditingProduct(null);
+                    setScannedUpcForCreate(digits.length >= 6 ? digits : null);
+                    setManageModalTab('products');
+                    setIsManageModalOpen(true);
+                  }}
                   className="min-h-[42px] px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold touch-manipulation select-none"
                 >
                   + Add Product
@@ -759,6 +920,15 @@ export default function App() {
     >
       <OfflineIndicator />
 
+      {/* Hidden quick-import file input for 1-tap backup file loading */}
+      <input
+        ref={quickImportInputRef}
+        type="file"
+        accept=".json,application/json"
+        onChange={handleQuickImportFileChosen}
+        className="hidden"
+      />
+
       {/* Compact Sticky Top Header (zero overlap on mobile or desktop) */}
       <header
         className={`sticky top-0 z-30 h-14 border-b backdrop-blur-md flex items-center ${
@@ -787,7 +957,7 @@ export default function App() {
             </span>
           </div>
 
-          {/* Right: Desktop Website View Toggle (lg+), GitHub Setup, Install PWA, Theme Mode, Manage Catalog */}
+          {/* Right: Desktop Website View Toggle (lg+), Export Backup, GitHub Setup, Install PWA, Theme Mode, Manage Catalog */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
@@ -888,16 +1058,19 @@ export default function App() {
         onEditProduct={handleOpenEditProduct}
       />
 
-      {/* Manage Catalog & Categories Modal */}
+      {/* Manage Catalog, Categories, & Backup Export/Import Modal */}
       <ManageCatalogModal
         isOpen={isManageModalOpen}
         initialTab={manageModalTab}
         initialEditingProduct={editingProduct}
+        initialScannedUpc={scannedUpcForCreate}
         products={products}
         categories={categories}
+        quantities={quantities}
         onClose={() => {
           setIsManageModalOpen(false);
           setEditingProduct(null);
+          setScannedUpcForCreate(null);
         }}
         onAddProduct={handleAddProduct}
         onUpdateProduct={handleUpdateProduct}
@@ -908,6 +1081,14 @@ export default function App() {
         onDeleteCategory={handleDeleteCategory}
         onImportCatalog={handleImportCatalog}
         onResetCatalogToDefaults={handleResetCatalogToDefaults}
+      />
+
+      {/* Main Toolbar Camera Barcode Scanner Modal */}
+      <CameraBarcodeScannerModal
+        isOpen={isMainScannerOpen}
+        onClose={() => setIsMainScannerOpen(false)}
+        onDetected={handleMainScannerDetected}
+        title="Scan Barcode to Find or Create Product"
       />
 
       {/* GitHub Push & GitHub Pages Deployment Modal */}

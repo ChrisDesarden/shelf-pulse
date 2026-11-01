@@ -1,6 +1,6 @@
 {
   "name": "Daily Inventory",
   "description": "Mobile-first Progressive Web App for daily team inventory counting with instant scannable UPC barcodes, category tracking, and one-tap summary export.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
