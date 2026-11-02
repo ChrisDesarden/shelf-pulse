@@ -72,13 +72,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       ? 'bg-emerald-950/90 border-2 border-emerald-400 text-white'
       : 'bg-slate-950 border-2 border-slate-600 text-white'
     : isActive
-    ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-500/70 dark:border-emerald-500/60'
-    : 'bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800';
+    ? 'glass-card-active'
+    : 'glass-card hover:border-slate-300/90 dark:hover:border-white/[0.15]';
 
   return (
     <article
-      className={`rounded-2xl p-3 transition-colors flex overflow-hidden ${
-        compact ? 'flex-col gap-2.5' : 'flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 sm:p-3.5'
+      className={`rounded-[22px] p-3 transition-all duration-200 flex overflow-hidden ${
+        compact ? 'flex-col gap-2.5' : 'flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3.5 sm:p-3.5'
       } ${cardSurfaceClass}`}
       data-testid={`product-card-${product.id}`}
     >
@@ -88,8 +88,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           type="button"
           onClick={() => onOpenLightbox(product)}
           className={`relative ${
-            compact ? 'w-16 h-16' : 'w-16 h-16 sm:w-20 sm:h-20'
-          } rounded-xl overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group focus-visible:outline-2 focus-visible:outline-emerald-500 touch-manipulation select-none`}
+            compact ? 'w-16 h-16' : 'w-16 h-16 sm:w-[76px] sm:h-[76px]'
+          } rounded-2xl overflow-hidden shrink-0 bg-slate-100/80 dark:bg-slate-800/80 border border-white/60 dark:border-white/[0.1] shadow-xs group focus-visible:outline-2 focus-visible:outline-emerald-500 touch-manipulation select-none`}
           aria-label={`Enlarge ${product.name} photo and barcode`}
         >
           {!imgError && product.image ? (
@@ -98,17 +98,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               alt={product.name}
               referrerPolicy="no-referrer"
               onError={() => setImgError(true)}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 p-1.5 text-center">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-200/70 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 p-1.5 text-center">
               <Package className="w-6 h-6 mb-0.5 text-emerald-600 dark:text-emerald-400" />
               <span className="text-[10px] font-semibold leading-tight line-clamp-2">
                 {product.name}
               </span>
             </div>
           )}
-          <span className="absolute bottom-1 right-1 w-5 h-5 rounded-md bg-slate-950/75 text-white flex items-center justify-center opacity-90 group-hover:bg-emerald-600 transition-colors">
+          <span className="absolute bottom-1 right-1 w-5 h-5 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/20 text-white flex items-center justify-center opacity-90 group-hover:bg-emerald-600 transition-colors">
             <Maximize2 className="w-3 h-3" />
           </span>
         </button>
@@ -117,8 +117,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-start justify-between gap-2">
             <h3
               className={`text-sm ${
-                compact ? '' : 'sm:text-base'
-              } font-bold leading-snug line-clamp-2 min-w-0 flex-1 ${
+                compact ? '' : 'sm:text-[15px]'
+              } font-bold tracking-tight leading-snug line-clamp-2 min-w-0 flex-1 ${
                 highContrast ? 'text-white' : 'text-slate-900 dark:text-slate-100'
               }`}
             >
@@ -130,10 +130,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               onClick={() => onEditProduct(product)}
               aria-label={`Edit ${product.name}`}
               title="Edit product details"
-              className={`min-w-[34px] min-h-[34px] p-1.5 rounded-lg flex items-center justify-center shrink-0 transition touch-manipulation select-none ${
+              className={`min-w-[34px] min-h-[34px] p-1.5 rounded-xl flex items-center justify-center shrink-0 transition touch-manipulation select-none ${
                 highContrast
                   ? 'bg-slate-800 text-emerald-300 border border-slate-500 hover:bg-slate-700'
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-100/70 dark:bg-slate-800/70 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  : 'glass-pill text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -174,7 +174,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenLightbox(product)}
-                className="text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-md touch-manipulation"
+                className="text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-lg touch-manipulation transition-opacity hover:opacity-90"
                 aria-label={`Scan barcode ${product.upc} for ${product.name}`}
               >
                 <BarcodeSVG upc={product.upc} height={24} width={1.2} displayValue={false} />
@@ -188,8 +188,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div
         className={`flex items-center justify-between ${
           compact
-            ? 'pt-2 border-t border-slate-100 dark:border-slate-800/80'
-            : 'sm:justify-end pt-2 sm:pt-0 border-t border-slate-100 dark:border-slate-800/80 sm:border-t-0'
+            ? 'pt-2 border-t border-slate-200/60 dark:border-white/[0.06]'
+            : 'sm:justify-end pt-2 sm:pt-0 border-t border-slate-200/60 dark:border-white/[0.06] sm:border-t-0'
         } gap-2 shrink-0 min-w-0`}
       >
         {/* Mobile crisp SVG barcode aligned left of the quantity controls */}
@@ -198,13 +198,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           onClick={() => onOpenLightbox(product)}
           className={`${
             compact ? 'block' : 'sm:hidden'
-          } text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-md touch-manipulation min-w-0 max-w-[48%] overflow-hidden`}
+          } text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-lg touch-manipulation min-w-0 max-w-[48%] overflow-hidden`}
           aria-label={`Scan barcode ${product.upc} for ${product.name}`}
         >
           <BarcodeSVG upc={product.upc} height={24} width={1.1} displayValue={false} />
         </button>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Native One UI / iOS Tactile Glass Stepper Capsule */}
+        <div
+          className={`flex items-center gap-1.5 p-1 rounded-2xl shrink-0 ${
+            highContrast
+              ? ''
+              : 'bg-slate-100/75 dark:bg-slate-950/55 border border-slate-200/80 dark:border-white/[0.07] shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]'
+          }`}
+        >
           <button
             type="button"
             onClick={handleDecrement}
@@ -212,10 +219,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             aria-label={`Decrease quantity for ${product.name}`}
             className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition active:scale-95 touch-manipulation select-none ${
               quantity <= 0
-                ? 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 cursor-not-allowed border border-slate-200/60 dark:border-slate-800'
+                ? 'bg-transparent text-slate-300 dark:text-slate-600 cursor-not-allowed'
                 : highContrast
                 ? 'bg-slate-800 text-white border-2 border-white hover:bg-slate-700'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'glass-pill text-slate-800 dark:text-slate-100 hover:bg-white dark:hover:bg-slate-800'
             }`}
           >
             <Minus className="w-5 h-5 stroke-[2.5]" />
@@ -239,8 +246,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   ? 'bg-emerald-500 text-slate-950 border-2 border-white'
                   : 'bg-slate-900 text-white border-2 border-slate-500'
                 : isActive
-                ? 'bg-emerald-600 text-white border border-emerald-700 shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700'
+                ? 'futuristic-cta'
+                : 'bg-white/90 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-200/90 dark:border-white/[0.08]'
             }`}
           />
 
@@ -251,7 +258,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition active:scale-95 touch-manipulation select-none ${
               highContrast
                 ? 'bg-emerald-400 text-slate-950 border-2 border-white hover:bg-emerald-300 font-bold'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                : 'futuristic-cta'
             }`}
           >
             <Plus className="w-5 h-5 stroke-[2.5]" />

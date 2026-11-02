@@ -3,7 +3,7 @@
 
 @layer base {
   :root {
-    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'One UI Sans', sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
@@ -11,12 +11,166 @@
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   code, pre, .font-mono {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Native iOS / Samsung One UI Frosted Glass & Futuristic Surface Primitives */
+.ambient-canvas {
+  background-color: #f2f6fb;
+  background-image:
+    radial-gradient(at 12% 8%, rgba(6, 182, 212, 0.12) 0px, transparent 48%),
+    radial-gradient(at 88% 14%, rgba(16, 185, 129, 0.12) 0px, transparent 52%),
+    radial-gradient(at 50% 92%, rgba(56, 189, 248, 0.09) 0px, transparent 55%);
+  background-attachment: fixed;
+}
+
+.dark .ambient-canvas {
+  background-color: #060a12;
+  background-image:
+    radial-gradient(at 12% 8%, rgba(6, 182, 212, 0.14) 0px, transparent 50%),
+    radial-gradient(at 88% 12%, rgba(16, 185, 129, 0.12) 0px, transparent 52%),
+    radial-gradient(at 50% 95%, rgba(14, 165, 233, 0.08) 0px, transparent 58%);
+  background-attachment: fixed;
+}
+
+.glass-bar {
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  background: rgba(255, 255, 255, 0.76);
+  border-color: rgba(226, 232, 240, 0.85);
+  box-shadow:
+    0 4px 24px -4px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.75);
+}
+
+.dark .glass-bar {
+  background: rgba(10, 15, 28, 0.74);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px -4px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+.glass-subbar {
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(226, 232, 240, 0.75);
+}
+
+.dark .glass-subbar {
+  background: rgba(13, 20, 36, 0.58);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.glass-card {
+  backdrop-filter: blur(20px) saturate(165%);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 10px 28px -8px rgba(15, 23, 42, 0.05),
+    0 2px 6px -1px rgba(15, 23, 42, 0.03),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  box-shadow:
+    0 12px 32px -10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-active {
+  backdrop-filter: blur(20px) saturate(175%);
+  -webkit-backdrop-filter: blur(20px) saturate(175%);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.88) 0%, rgba(240, 253, 250, 0.82) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.48);
+  box-shadow:
+    0 12px 30px -8px rgba(16, 185, 129, 0.14),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+.dark .glass-card-active {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.34) 0%, rgba(15, 23, 42, 0.76) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  box-shadow:
+    0 12px 34px -8px rgba(16, 185, 129, 0.18),
+    inset 0 1px 0 0 rgba(110, 231, 183, 0.18);
+}
+
+.glass-input {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(241, 245, 249, 0.78);
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.dark .glass-input {
+  background: rgba(6, 10, 19, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.glass-pill {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.dark .glass-pill {
+  background: rgba(30, 41, 59, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-modal {
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 24px 60px -12px rgba(15, 23, 42, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+.dark .glass-modal {
+  background: rgba(11, 17, 31, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 28px 68px -12px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.11);
+}
+
+.futuristic-cta {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 55%, #0891b2 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 6px 18px -4px rgba(16, 185, 129, 0.42),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.32);
+}
+
+.futuristic-cta:hover {
+  filter: brightness(1.06);
 }
 
 /* Remove default spinners from numeric inputs for clean mobile entry */

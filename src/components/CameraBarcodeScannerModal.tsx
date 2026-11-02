@@ -27,7 +27,6 @@ interface CameraBarcodeScannerModalProps {
   title?: string;
 }
 
-// Type declaration for browser BarcodeDetector API where supported
 interface DetectedBarcode {
   rawValue: string;
   format?: string;
@@ -94,10 +93,6 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
     return true;
   };
 
-  /**
-   * Scans an HTMLVideoElement or HTMLImageElement frame using both our multi-angle
-   * adaptive-threshold 1D barcode decoder and native BarcodeDetector (if available).
-   */
   const decodeFrameSource = async (
     source: HTMLVideoElement | HTMLImageElement,
     width: number,
@@ -105,7 +100,6 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
   ): Promise<string | null> => {
     if (width <= 0 || height <= 0) return null;
 
-    // 1. Multi-angle adaptive-threshold 1D canvas decoder (accurately preserves 8-digit UPC-E vs 12-digit UPC-A)
     const canvas = canvasRef.current;
     if (canvas) {
       const maxW = source instanceof HTMLImageElement ? 1280 : 960;
@@ -126,7 +120,6 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
       }
     }
 
-    // 2. Fallback to native hardware BarcodeDetector API if available
     if (typeof window !== 'undefined' && window.BarcodeDetector) {
       try {
         const detector = new window.BarcodeDetector({
@@ -211,7 +204,6 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
         }
         setCameraState('active');
 
-        // Poll video frames every 160ms (~6 FPS) for low battery impact & instant recognition
         scanIntervalId = window.setInterval(async () => {
           if (cancelled || !videoRef.current) return;
           const v = videoRef.current;
@@ -289,14 +281,14 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4"
+      className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2.5 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="camera-scanner-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[calc(100dvh-20px)] overflow-y-auto overflow-x-hidden rounded-3xl bg-slate-900 border border-slate-700 p-4 sm:p-5 shadow-2xl text-white flex flex-col gap-3.5"
+        className="w-full max-w-md max-h-[calc(100dvh-20px)] overflow-y-auto overflow-x-hidden rounded-[28px] glass-modal p-4 sm:p-5 text-slate-900 dark:text-white flex flex-col gap-3.5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
@@ -306,7 +298,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
               type="button"
               onClick={onClose}
               aria-label="Back from camera scanner"
-              className="min-h-[38px] px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none shrink-0"
+              className="min-h-[38px] px-2.5 py-1 rounded-2xl glass-pill text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none shrink-0"
             >
               <ArrowLeft className="w-4 h-4 shrink-0" />
               <span>Back</span>
@@ -314,9 +306,9 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             <div className="min-w-0">
               <h2
                 id="camera-scanner-title"
-                className="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5 truncate"
+                className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 truncate"
               >
-                <ScanBarcode className="w-4 h-4 text-emerald-400 shrink-0" />
+                <ScanBarcode className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                 <span className="truncate">{title}</span>
               </h2>
             </div>
@@ -326,14 +318,14 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             type="button"
             onClick={onClose}
             aria-label="Close camera scanner"
-            className="min-w-[38px] min-h-[38px] rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-200 touch-manipulation select-none shrink-0"
+            className="min-w-[38px] min-h-[38px] rounded-2xl glass-pill flex items-center justify-center text-slate-700 dark:text-slate-200 touch-manipulation select-none shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Camera Viewfinder Box */}
-        <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-black border-2 border-slate-700 flex items-center justify-center">
+        <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-950 border border-white/15 shadow-inner flex items-center justify-center">
           <video
             ref={videoRef}
             playsInline
@@ -344,14 +336,12 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             }`}
           />
 
-          {/* Hidden canvas for multi-scanline 1D barcode decoding */}
           <canvas ref={canvasRef} className="hidden" />
 
           {/* Target Reticle & Laser Scanline Overlay */}
           {cameraState === 'active' && !scannedResult && (
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-5">
               <div className="w-full max-w-[260px] h-32 rounded-2xl border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(2,6,23,0.52)] relative flex items-center justify-center overflow-hidden">
-                {/* Laser scanline */}
                 <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#10b981]" />
               </div>
               <span className="mt-2.5 px-2.5 py-1 rounded-full bg-slate-950/85 text-[11px] font-semibold text-emerald-300 border border-emerald-500/40">
@@ -360,7 +350,6 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             </div>
           )}
 
-          {/* Starting / Error / Success Overlay States */}
           {cameraState === 'starting' && !scannedResult && (
             <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
               <Camera className="w-8 h-8 text-emerald-400 mb-2" />
@@ -399,18 +388,18 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             onClick={() =>
               setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
             }
-            className="min-h-[42px] px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
+            className="min-h-[42px] px-3 py-2 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
             <span>Flip Camera</span>
           </button>
 
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="min-h-[42px] px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
+            className="min-h-[42px] px-3 py-2 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
           >
-            <ImageIcon className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <ImageIcon className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400 shrink-0" />
             <span>Scan from Photo</span>
           </button>
           <input
@@ -424,19 +413,19 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
         </div>
 
         {photoScanStatus && (
-          <div className="p-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-200 text-center">
+          <div className="p-2.5 rounded-2xl glass-pill text-xs text-slate-800 dark:text-slate-200 text-center">
             {photoScanStatus}
           </div>
         )}
 
         {/* Quick Test Scan (8-Digit & 12-Digit) & Close Footer */}
-        <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div className="pt-2 border-t border-slate-200/70 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleSimulateShortUpcScan}
               data-testid="simulate-short-barcode-scan-btn"
-              className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
+              className="min-h-[40px] px-2.5 py-1.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>Test 8-Digit</span>
@@ -445,7 +434,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
               type="button"
               onClick={handleSimulateSampleScan}
               data-testid="simulate-barcode-scan-btn"
-              className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
+              className="min-h-[40px] px-2.5 py-1.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>Test 12-Digit</span>
@@ -455,7 +444,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[40px] px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition touch-manipulation select-none"
+            className="min-h-[40px] px-4 py-1.5 rounded-2xl glass-pill text-slate-800 dark:text-white text-xs font-bold transition touch-manipulation select-none"
           >
             Cancel
           </button>

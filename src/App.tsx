@@ -515,7 +515,7 @@ export default function App() {
         className={
           highContrast
             ? 'min-h-screen bg-black text-white'
-            : 'min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100'
+            : 'min-h-screen ambient-canvas text-slate-900 dark:text-slate-100'
         }
       >
         <OfflineIndicator />
@@ -548,7 +548,7 @@ export default function App() {
 
     const gridColsClass = insidePhoneFrame
       ? 'grid grid-cols-1 gap-2.5'
-      : 'grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3';
+      : 'grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5';
 
     return (
       <>
@@ -558,24 +558,24 @@ export default function App() {
           className={`border-b ${
             highContrast
               ? 'bg-slate-950 border-slate-700'
-              : 'bg-white dark:bg-slate-900/70 border-slate-200/80 dark:border-slate-800/80'
+              : 'glass-subbar'
           }`}
         >
           <div className={`${insidePhoneFrame ? 'px-3' : 'max-w-7xl mx-auto px-3 sm:px-6'} py-3 space-y-2.5`}>
             {/* Real-time Search Bar + Camera Scan Button */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 min-w-0">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search name or UPC barcode..."
                   aria-label="Search products by name or UPC"
-                  className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-xl text-sm transition focus:outline-2 focus:outline-emerald-500 ${
+                  className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-2xl text-sm transition focus:outline-2 focus:outline-emerald-500 ${
                     highContrast
                       ? 'bg-black text-white border-2 border-white placeholder:text-slate-400'
-                      : 'bg-slate-100/90 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 placeholder:text-slate-400'
+                      : 'glass-input text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500'
                   }`}
                 />
                 {searchQuery && (
@@ -583,7 +583,7 @@ export default function App() {
                     type="button"
                     onClick={() => setSearchQuery('')}
                     aria-label="Clear search"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[34px] min-h-[34px] rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 touch-manipulation select-none"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[34px] min-h-[34px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80 touch-manipulation select-none"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -595,10 +595,10 @@ export default function App() {
                 onClick={() => setIsMainScannerOpen(true)}
                 aria-label="Scan barcode with camera to find or add product"
                 title="Scan UPC barcode with camera"
-                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+                className={`min-h-[44px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition active:scale-[0.98] touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
                     ? 'bg-emerald-400 text-slate-950 border-2 border-white'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                    : 'futuristic-cta'
                 }`}
               >
                 <Camera className="w-4 h-4 shrink-0" />
@@ -627,27 +627,27 @@ export default function App() {
                       role="tab"
                       aria-selected={isSelected}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+                      className={`min-h-[40px] px-3.5 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition active:scale-[0.98] touch-manipulation select-none whitespace-nowrap shrink-0 ${
                         highContrast
                           ? isSelected
                             ? 'bg-emerald-400 text-slate-950 border-2 border-white'
                             : 'bg-slate-900 text-white border border-slate-600'
                           : isSelected
-                          ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800'
+                          ? 'futuristic-cta'
+                          : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       <span>{cat}</span>
                       {activeCount > 0 && (
                         <span
-                          className={`font-mono text-[11px] font-extrabold px-1.5 py-0.2 rounded-md ${
+                          className={`font-mono text-[11px] font-extrabold px-1.5 py-0.2 rounded-lg ${
                             highContrast
                               ? isSelected
                                 ? 'bg-slate-950 text-emerald-300'
                                 : 'bg-emerald-400 text-slate-950'
                               : isSelected
-                              ? 'bg-emerald-500 dark:bg-slate-950 text-white'
-                              : 'bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300'
+                              ? 'bg-slate-950/25 text-white'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                           }`}
                         >
                           {activeCount}
@@ -662,10 +662,10 @@ export default function App() {
                 type="button"
                 onClick={handleOpenManageCategories}
                 aria-label="Edit Categories"
-                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+                className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
-                    ? 'bg-slate-900 text-emerald-300 border-emerald-400'
-                    : 'bg-transparent border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    ? 'bg-slate-900 text-emerald-300 border border-emerald-400'
+                    : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                 }`}
               >
                 <FolderCog className="w-3.5 h-3.5 shrink-0" />
@@ -676,10 +676,10 @@ export default function App() {
                 type="button"
                 onClick={handleDirectExportBackupFile}
                 aria-label="Export all data, categories, products, photos, and barcodes to a single file"
-                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+                className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
-                    ? 'bg-slate-900 text-emerald-300 border-emerald-400'
-                    : 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                    ? 'bg-slate-900 text-emerald-300 border border-emerald-400'
+                    : 'glass-pill text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40'
                 }`}
               >
                 <Download className="w-3.5 h-3.5 shrink-0" />
@@ -690,10 +690,10 @@ export default function App() {
                 type="button"
                 onClick={() => quickImportInputRef.current?.click()}
                 aria-label="Import data file from another device"
-                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+                className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
-                    ? 'bg-slate-900 text-white border-white'
-                    : 'bg-slate-100 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-slate-900 text-white border border-white'
+                    : 'glass-pill text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Upload className="w-3.5 h-3.5 shrink-0" />
@@ -709,14 +709,14 @@ export default function App() {
             <div
               role="status"
               aria-live="polite"
-              className="rounded-xl bg-emerald-600 text-white px-3.5 py-2.5 text-xs font-bold shadow-sm flex items-center justify-between gap-2"
+              className="rounded-2xl futuristic-cta px-4 py-2.5 text-xs font-bold flex items-center justify-between gap-2"
             >
               <span>{bannerFeedback}</span>
               <button
                 type="button"
                 onClick={() => setBannerFeedback(null)}
                 aria-label="Dismiss notification"
-                className="p-1 rounded-lg hover:bg-emerald-500"
+                className="p-1 rounded-xl hover:bg-white/20"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -727,8 +727,8 @@ export default function App() {
         {/* Main Product Counting List */}
         <main className={`${insidePhoneFrame ? 'px-3 pb-20' : 'max-w-7xl mx-auto px-3 sm:px-6 pb-6'} pt-4`}>
           {filteredProducts.length === 0 ? (
-            <div className="my-12 max-w-md mx-auto text-center p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <PackageSearch className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+            <div className="my-12 max-w-md mx-auto text-center p-6 rounded-3xl glass-card">
+              <PackageSearch className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 No matching products found
               </h2>
@@ -742,7 +742,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="min-h-[42px] px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 touch-manipulation select-none"
+                    className="min-h-[42px] px-4 py-2 rounded-2xl glass-pill text-xs font-bold text-slate-800 dark:text-slate-200 touch-manipulation select-none"
                   >
                     Clear Search
                   </button>
@@ -756,7 +756,7 @@ export default function App() {
                     setManageModalTab('products');
                     setIsManageModalOpen(true);
                   }}
-                  className="min-h-[42px] px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold touch-manipulation select-none"
+                  className="min-h-[42px] px-4 py-2 rounded-2xl futuristic-cta text-xs font-bold touch-manipulation select-none"
                 >
                   + Add Product
                 </button>
@@ -768,12 +768,12 @@ export default function App() {
                 const countedInGroup = metrics.categoryCounts[category] || 0;
                 return (
                   <section key={category} aria-label={category} className="space-y-2.5">
-                    <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center justify-between px-1.5">
                       <h2
                         className={`text-sm sm:text-base font-extrabold tracking-tight ${
                           highContrast
                             ? 'text-emerald-300'
-                            : 'text-slate-800 dark:text-slate-200'
+                            : 'text-slate-800 dark:text-slate-100'
                         }`}
                       >
                         {category}
@@ -803,7 +803,7 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center justify-between px-1.5">
                 <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400">
                   Showing {filteredProducts.length}{' '}
                   {filteredProducts.length === 1 ? 'product' : 'products'}
@@ -829,14 +829,14 @@ export default function App() {
           )}
         </main>
 
-        {/* Bottom Action Bar */}
+        {/* Bottom Frosted Glass Dock (h-[60px] to keep total sticky height <= 15% on mobile) */}
         <footer
           className={`${
             insidePhoneFrame ? 'sticky bottom-0 left-0 right-0' : 'fixed bottom-0 left-0 right-0'
-          } z-30 h-16 border-t backdrop-blur-md flex items-center ${
+          } z-30 h-[60px] border-t flex items-center ${
             highContrast
               ? 'bg-black border-t-2 border-white text-white'
-              : 'bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800'
+              : 'glass-bar'
           }`}
         >
           <div className={`${insidePhoneFrame ? 'px-3' : 'max-w-7xl mx-auto px-3 sm:px-6'} w-full flex items-center justify-between gap-2`}>
@@ -846,12 +846,12 @@ export default function App() {
               onClick={() => setIsResetConfirmOpen(true)}
               disabled={metrics.productsCounted === 0}
               aria-label="Reset all quantities"
-              className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-h-[44px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 metrics.productsCounted === 0
-                  ? 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  ? 'glass-pill text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
                   : highContrast
                   ? 'bg-rose-950 text-rose-200 border-2 border-rose-400'
-                  : 'bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-600 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/70'
+                  : 'bg-rose-500/10 dark:bg-rose-500/15 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30'
               }`}
             >
               <RotateCcw className="w-4 h-4 shrink-0" />
@@ -892,12 +892,12 @@ export default function App() {
               type="button"
               disabled={metrics.productsCounted === 0}
               onClick={() => setActiveView('summary')}
-              className={`min-h-[44px] px-3.5 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-1.5 transition active:scale-[0.98] touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-h-[44px] px-4 py-2 rounded-2xl font-extrabold text-xs flex items-center gap-1.5 transition active:scale-[0.98] touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 metrics.productsCounted === 0
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  ? 'glass-pill text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
                   : highContrast
                   ? 'bg-emerald-400 text-slate-950 border-2 border-white'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20'
+                  : 'futuristic-cta'
               }`}
             >
               <span>Finish Work -&gt;</span>
@@ -913,7 +913,7 @@ export default function App() {
       className={
         highContrast
           ? `min-h-screen bg-black text-white overflow-x-hidden ${isFramed ? 'pb-10' : 'pb-24'}`
-          : `min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-x-hidden ${
+          : `min-h-screen ambient-canvas text-slate-900 dark:text-slate-100 overflow-x-hidden ${
               isFramed ? 'pb-10' : 'pb-24'
             }`
       }
@@ -929,12 +929,12 @@ export default function App() {
         className="hidden"
       />
 
-      {/* Compact Sticky Top Header (zero overlap on mobile or desktop) */}
+      {/* Compact Sticky Top Frosted Glass Header (h-[52px] so header + footer <= 15% mobile viewport) */}
       <header
-        className={`sticky top-0 z-30 h-14 border-b backdrop-blur-md flex items-center ${
+        className={`sticky top-0 z-30 h-[52px] border-b flex items-center ${
           highContrast
             ? 'bg-black border-b-2 border-white text-white'
-            : 'bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800'
+            : 'glass-bar'
         }`}
       >
         <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 flex items-center justify-between gap-2">
@@ -970,10 +970,10 @@ export default function App() {
                 isFramed ? 'Switch to Full Workspace' : 'Switch to Website View'
               }
               title="Toggle Interactive Website Showcase & Handheld Frame"
-              className={`hidden lg:flex min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 border ${
+              className={`hidden lg:flex min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 isFramed
-                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+                  ? 'futuristic-cta'
+                  : 'glass-pill text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Layout className="w-3.5 h-3.5 shrink-0" />
@@ -985,7 +985,7 @@ export default function App() {
               onClick={() => setIsGitHubModalOpen(true)}
               aria-label="GitHub Push & Pages Guide"
               title="GitHub Push & GitHub Pages Instructions"
-              className="hidden sm:flex min-h-[40px] px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
+              className="hidden sm:flex min-h-[40px] px-2.5 py-1.5 rounded-2xl glass-pill text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span className="hidden lg:inline">GitHub</span>
@@ -998,14 +998,14 @@ export default function App() {
               onClick={cycleThemeMode}
               aria-label={`Switch display mode (current: ${themeMode})`}
               title="Toggle Light / Dark / High-Contrast Warehouse Mode"
-              className={`min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 highContrast
                   ? 'bg-emerald-400 text-slate-950 border-2 border-white'
-                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
+                  : 'glass-pill text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               {themeMode === 'light' && <Sun className="w-4 h-4 text-amber-500" />}
-              {themeMode === 'dark' && <Moon className="w-4 h-4 text-sky-400" />}
+              {themeMode === 'dark' && <Moon className="w-4 h-4 text-cyan-400" />}
               {themeMode === 'contrast' && <Contrast className="w-4 h-4 text-slate-950" />}
             </button>
 
@@ -1013,13 +1013,13 @@ export default function App() {
               type="button"
               onClick={handleOpenManageProducts}
               aria-label="Manage Catalog"
-              className={`min-h-[40px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 highContrast
                   ? 'bg-slate-900 text-white border-2 border-white hover:bg-slate-800'
-                  : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700'
+                  : 'glass-pill text-slate-800 dark:text-slate-100 hover:border-emerald-500/40'
               }`}
             >
-              <Settings2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <Settings2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
               <span>Catalog</span>
             </button>
           </div>
@@ -1100,17 +1100,17 @@ export default function App() {
       {/* Reset Confirmation Modal ("Clear all quantities for today?") */}
       {isResetConfirmOpen && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="reset-confirm-title"
           onClick={() => setIsResetConfirmOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-3xl glass-modal p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <h2
@@ -1126,14 +1126,14 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsResetConfirmOpen(false)}
-                className="flex-1 min-h-[44px] rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-bold transition touch-manipulation select-none"
+                className="flex-1 min-h-[44px] rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-sm font-bold transition touch-manipulation select-none"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReset}
-                className="flex-1 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition touch-manipulation select-none"
+                className="flex-1 min-h-[44px] rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition touch-manipulation select-none shadow-md shadow-rose-600/25"
               >
                 Clear All
               </button>

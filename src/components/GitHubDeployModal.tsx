@@ -49,24 +49,24 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4"
+      className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2.5 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="github-deploy-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl max-h-[calc(100dvh-20px)] sm:max-h-[90dvh] rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl overflow-hidden"
+        className="w-full max-w-xl max-h-[calc(100dvh-20px)] sm:max-h-[90dvh] rounded-[28px] glass-modal flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3.5 border-b border-slate-200/70 dark:border-white/[0.08] shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={onClose}
               aria-label="Back to inventory"
-              className="min-h-[38px] px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none shrink-0"
+              className="min-h-[38px] px-2.5 py-1 rounded-2xl glass-pill text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none shrink-0"
             >
               <ArrowLeft className="w-4 h-4 shrink-0" />
               <span>Back</span>
@@ -85,7 +85,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close GitHub deployment guide"
-            className="min-w-[40px] min-h-[40px] rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 touch-manipulation select-none shrink-0"
+            className="min-w-[40px] min-h-[40px] rounded-2xl glass-pill flex items-center justify-center text-slate-700 dark:text-slate-200 touch-manipulation select-none shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -93,8 +93,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
 
         {/* Scrollable Content */}
         <div className="p-4 sm:p-5 overflow-y-auto overflow-x-hidden space-y-4 text-sm flex-1">
-          {/* Preconfigured Files Status */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 space-y-1.5">
+          <div className="p-3.5 rounded-2xl bg-emerald-500/12 border border-emerald-500/30 space-y-1.5">
             <div className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 shrink-0" />
               <span>Ready for GitHub &amp; GitHub Pages</span>
@@ -104,7 +103,6 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
             </p>
           </div>
 
-          {/* Customizer Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
@@ -119,7 +117,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
                 value={githubUser}
                 onChange={(e) => setGithubUser(e.target.value)}
                 placeholder="your-username"
-                className="w-full min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 font-mono text-xs text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
+                className="w-full min-h-[40px] px-3 py-1.5 rounded-2xl glass-input font-mono text-xs text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
               />
             </div>
             <div>
@@ -135,12 +133,11 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
                 value={repoName}
                 onChange={(e) => setRepoName(e.target.value)}
                 placeholder="shelf-pulse"
-                className="w-full min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 font-mono text-xs text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
+                className="w-full min-h-[40px] px-3 py-1.5 rounded-2xl glass-input font-mono text-xs text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
               />
             </div>
           </div>
 
-          {/* Step 1: Terminal Push Commands */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -150,7 +147,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
               <button
                 type="button"
                 onClick={handleCopyCommands}
-                className="min-h-[32px] px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none shrink-0"
+                className="min-h-[32px] px-2.5 py-1 rounded-xl futuristic-cta text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none shrink-0"
               >
                 {copiedCmd ? (
                   <>
@@ -165,13 +162,12 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
                 )}
               </button>
             </div>
-            <pre className="p-3.5 rounded-2xl bg-slate-950 text-emerald-300 font-mono text-xs overflow-x-auto border border-slate-800 leading-relaxed select-all">
+            <pre className="p-3.5 rounded-2xl bg-slate-950/90 text-emerald-300 font-mono text-xs overflow-x-auto border border-white/10 leading-relaxed select-all">
               {gitCommands}
             </pre>
           </div>
 
-          {/* Step 2: Enable GitHub Pages */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
+          <div className="p-4 rounded-2xl glass-pill space-y-2">
             <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <FileCode2 className="w-4 h-4 text-emerald-500 shrink-0" />
               <span>2. Enable GitHub Pages (Interactive Web View)</span>
@@ -187,7 +183,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
                 GitHub Actions will automatically build and publish your live interactive website at:
               </li>
             </ol>
-            <div className="mt-2 p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-xs text-emerald-600 dark:text-emerald-400 break-all select-all">
+            <div className="mt-2 p-2.5 rounded-xl glass-input font-mono text-xs text-emerald-600 dark:text-emerald-400 break-all select-all">
               {livePagesUrl}
             </div>
           </div>
@@ -195,7 +191,7 @@ export const GitHubDeployModal: React.FC<GitHubDeployModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-full min-h-[44px] rounded-xl bg-slate-900 dark:bg-emerald-600 hover:opacity-95 text-white font-bold text-sm transition touch-manipulation select-none"
+            className="w-full min-h-[44px] rounded-2xl futuristic-cta font-bold text-sm transition touch-manipulation select-none"
           >
             Done
           </button>

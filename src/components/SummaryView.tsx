@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Copy, Check, Share2, Layers, List, Barcode } from 'lucide-react';
+import { Copy, Check, Share2, Layers, List, Barcode } from 'lucide-react';
 import type { Product } from '../data/products';
 import {
   formatInventorySummaryText,
@@ -99,12 +99,10 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
         if ((err as Error)?.name === 'AbortError') return;
       }
     }
-    // Fallback if Web Share API is unavailable on desktop browser
     await handleCopy();
     showToast('Share sheet unavailable on this browser — copied to clipboard instead!');
   };
 
-  // Group counted items by category when groupByCategory is active
   const groupedCountedItems = React.useMemo(() => {
     const map = new Map<string, Array<{ product: Product; quantity: number }>>();
     for (const entry of countedItems) {
@@ -117,22 +115,22 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col pb-32">
-      {/* Sticky Top Header */}
+      {/* Sticky Top Frosted Glass Header */}
       <header
-        className={`sticky top-0 z-30 border-b backdrop-blur-md ${
+        className={`sticky top-0 z-30 border-b ${
           highContrast
             ? 'bg-slate-950 border-slate-700 text-white'
-            : 'bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800'
+            : 'glass-bar'
         }`}
       >
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={onBackToEdit}
-            className={`min-h-[44px] px-3.5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
               highContrast
                 ? 'bg-slate-800 text-white border-2 border-white'
-                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white'
+                : 'glass-pill text-slate-900 dark:text-white'
             }`}
           >
             <span>&lt;- Back to Edit</span>
@@ -151,12 +149,11 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 
       {/* Main Content */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 pt-4 space-y-5">
-        {/* Toast notification */}
         {toastMessage && (
           <div
             role="status"
             aria-live="polite"
-            className="rounded-2xl bg-emerald-600 text-white px-4 py-3 text-sm font-bold shadow-lg flex items-center justify-center gap-2"
+            className="rounded-2xl futuristic-cta px-4 py-3 text-sm font-bold flex items-center justify-center gap-2"
           >
             <Check className="w-5 h-5 shrink-0" />
             <span>{toastMessage}</span>
@@ -166,21 +163,20 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
         {/* Formatting Controls Card */}
         <section
           aria-label="Export Formatting Controls"
-          className={`rounded-2xl p-4 border ${
+          className={`rounded-3xl p-4 ${
             highContrast
               ? 'bg-slate-900 border-2 border-slate-600 text-white'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+              : 'glass-card'
           }`}
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Group by Category vs Flat List segmented toggle */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-slate-950/60 border border-slate-200/80 dark:border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => setGroupByCategory(true)}
-                className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap ${
+                className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap ${
                   groupByCategory
-                    ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-xs'
+                    ? 'futuristic-cta'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -190,9 +186,9 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setGroupByCategory(false)}
-                className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap ${
+                className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap ${
                   !groupByCategory
-                    ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-xs'
+                    ? 'futuristic-cta'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -201,8 +197,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
               </button>
             </div>
 
-            {/* Include UPC toggle switch */}
-            <label className="min-h-[44px] px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center justify-between sm:justify-start gap-3 cursor-pointer touch-manipulation select-none">
+            <label className="min-h-[44px] px-3.5 py-2 rounded-2xl glass-pill flex items-center justify-between sm:justify-start gap-3 cursor-pointer touch-manipulation select-none">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
                 <Barcode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Include UPC in copied text</span>
@@ -219,7 +214,6 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 
         {/* Two-column layout on desktop: Left = Visual Summary Cards, Right = Plain Text Copy Preview */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Visual Summary Card List */}
           <section className="lg:col-span-7 space-y-4">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">
               Counted Items ({countedItems.length})
@@ -230,13 +224,13 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                 {groupedCountedItems.map(([category, entries]) => (
                   <div
                     key={category}
-                    className={`rounded-2xl overflow-hidden border ${
+                    className={`rounded-3xl overflow-hidden ${
                       highContrast
                         ? 'bg-slate-950 border-2 border-slate-600'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                        : 'glass-card'
                     }`}
                   >
-                    <div className="px-4 py-2.5 bg-slate-100/80 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div className="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-800/50 border-b border-slate-200/70 dark:border-white/[0.07] flex items-center justify-between">
                       <h3 className="text-xs font-extrabold tracking-wide text-slate-800 dark:text-slate-200">
                         {category}
                       </h3>
@@ -245,7 +239,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                       </span>
                     </div>
 
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <div className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
                       {entries.map(({ product, quantity }) => (
                         <div
                           key={product.id}
@@ -284,10 +278,10 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
               </div>
             ) : (
               <div
-                className={`rounded-2xl overflow-hidden border divide-y divide-slate-100 dark:divide-slate-800 ${
+                className={`rounded-3xl overflow-hidden divide-y divide-slate-200/60 dark:divide-white/[0.06] ${
                   highContrast
                     ? 'bg-slate-950 border-2 border-slate-600'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                    : 'glass-card'
                 }`}
               >
                 {countedItems.map(({ product, quantity }) => (
@@ -317,7 +311,6 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             )}
           </section>
 
-          {/* Read-Only Plain Text Copy Preview Box */}
           <section className="lg:col-span-5 space-y-2">
             <div className="flex items-center justify-between px-1">
               <label
@@ -333,32 +326,32 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
               rows={Math.max(8, Math.min(18, plainTextSummary.split('\n').length + 2))}
               value={plainTextSummary}
               onClick={(e) => e.currentTarget.select()}
-              className={`w-full rounded-2xl p-4 font-mono text-xs sm:text-sm leading-relaxed border focus:outline-2 focus:outline-emerald-500 ${
+              className={`w-full rounded-3xl p-4 font-mono text-xs sm:text-sm leading-relaxed border focus:outline-2 focus:outline-emerald-500 ${
                 highContrast
                   ? 'bg-slate-950 border-2 border-white text-emerald-300'
-                  : 'bg-slate-900 text-slate-100 border-slate-800 shadow-inner'
+                  : 'glass-card bg-slate-900/90 dark:bg-slate-950/80 text-slate-100 border-white/10'
               }`}
             />
           </section>
         </div>
       </main>
 
-      {/* Sticky Bottom Copy & Share Action Bar */}
+      {/* Sticky Bottom Copy & Share Frosted Glass Bar */}
       <footer
-        className={`fixed bottom-0 left-0 right-0 z-30 border-t backdrop-blur-md ${
+        className={`fixed bottom-0 left-0 right-0 z-30 border-t ${
           highContrast
             ? 'bg-slate-950 border-t-2 border-white'
-            : 'bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800'
+            : 'glass-bar'
         }`}
       >
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <button
             type="button"
             onClick={handleCopy}
-            className={`flex-1 min-h-[52px] px-5 py-3 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2.5 shadow-lg transition active:scale-[0.99] touch-manipulation select-none ${
+            className={`flex-1 min-h-[52px] px-5 py-3 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2.5 transition active:scale-[0.99] touch-manipulation select-none ${
               copied
-                ? 'bg-emerald-500 text-slate-950'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg'
+                : 'futuristic-cta'
             }`}
           >
             {copied ? (
@@ -381,7 +374,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             className={`min-h-[52px] px-5 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] touch-manipulation select-none shrink-0 ${
               highContrast
                 ? 'bg-slate-800 text-white border-2 border-white'
-                : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white'
+                : 'glass-pill text-slate-900 dark:text-white'
             }`}
           >
             <Share2 className="w-4 h-4" />
