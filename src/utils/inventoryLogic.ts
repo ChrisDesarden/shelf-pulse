@@ -147,6 +147,62 @@ export function getCountedProducts(
   return result;
 }
 
+export interface CategoryNavigationResult {
+  categoryProducts: Product[];
+  currentIndex: number;
+  totalInCategory: number;
+  prevProduct: Product | null;
+  nextProduct: Product | null;
+}
+
+/**
+ * Returns the list of products in the same category as currentProduct,
+ * along with the previous and next product in that category (wrapping around when > 1 item).
+ */
+export function getCategoryNavigation(
+  products: Product[],
+  currentProduct: Product | null
+): CategoryNavigationResult {
+  if (!currentProduct) {
+    return {
+      categoryProducts: [],
+      currentIndex: -1,
+      totalInCategory: 0,
+      prevProduct: null,
+      nextProduct: null,
+    };
+  }
+
+  const categoryProducts = products.filter(
+    (p) => p.category === currentProduct.category
+  );
+  const totalInCategory = categoryProducts.length;
+  const currentIndex = categoryProducts.findIndex(
+    (p) => p.id === currentProduct.id
+  );
+
+  if (currentIndex === -1 || totalInCategory <= 1) {
+    return {
+      categoryProducts,
+      currentIndex,
+      totalInCategory,
+      prevProduct: null,
+      nextProduct: null,
+    };
+  }
+
+  const prevIndex = (currentIndex - 1 + totalInCategory) % totalInCategory;
+  const nextIndex = (currentIndex + 1) % totalInCategory;
+
+  return {
+    categoryProducts,
+    currentIndex,
+    totalInCategory,
+    prevProduct: categoryProducts[prevIndex],
+    nextProduct: categoryProducts[nextIndex],
+  };
+}
+
 export interface SummaryFormatOptions {
   dateString: string;
   groupByCategory: boolean;

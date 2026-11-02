@@ -9,6 +9,7 @@ import {
   formatInventorySummaryText,
   getCategories,
   getCountedProducts,
+  getCategoryNavigation,
   computeUpcCheckDigit,
   isValidUpcA,
   computeEan8CheckDigit,
@@ -390,5 +391,37 @@ test('decodeBarcodeFromRgbaImage accurately decodes 04997704 from real tilted bl
   }
 
   assert.equal(decodeBarcodeFromRgbaImage(rgba, width, height), '04997704');
+});
+
+test('getCategoryNavigation navigates to previous and next products strictly within the same category', () => {
+  const bev1 = INITIAL_PRODUCTS.find((p) => p.id === 'bev-01')!;
+  const bev2 = INITIAL_PRODUCTS.find((p) => p.id === 'bev-02')!;
+  const bev3 = INITIAL_PRODUCTS.find((p) => p.id === 'bev-03')!;
+
+  const navFromFirst = getCategoryNavigation(INITIAL_PRODUCTS, bev1);
+  assert.equal(navFromFirst.totalInCategory, 3);
+  assert.equal(navFromFirst.currentIndex, 0);
+  assert.equal(navFromFirst.nextProduct?.id, 'bev-02');
+  assert.equal(navFromFirst.prevProduct?.id, 'bev-03');
+  assert.equal(
+    navFromFirst.categoryProducts.every((p) => p.category === 'Beverages'),
+    true
+  );
+
+  const navFromSecond = getCategoryNavigation(INITIAL_PRODUCTS, bev2);
+  assert.equal(navFromSecond.currentIndex, 1);
+  assert.equal(navFromSecond.prevProduct?.id, 'bev-01');
+  assert.equal(navFromSecond.nextProduct?.id, 'bev-03');
+
+  const navFromThird = getCategoryNavigation(INITIAL_PRODUCTS, bev3);
+  assert.equal(navFromThird.currentIndex, 2);
+  assert.equal(navFromThird.prevProduct?.id, 'bev-02');
+  assert.equal(navFromThird.nextProduct?.id, 'bev-01');
+
+  const singleItemList = [bev1];
+  const navSingle = getCategoryNavigation(singleItemList, bev1);
+  assert.equal(navSingle.totalInCategory, 1);
+  assert.equal(navSingle.prevProduct, null);
+  assert.equal(navSingle.nextProduct, null);
 });
 

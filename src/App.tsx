@@ -1066,9 +1066,11 @@ export default function App() {
       {/* Full-Screen Barcode & Photo Lightbox Modal */}
       <BarcodeLightboxModal
         product={lightboxProduct}
+        products={products}
         quantity={lightboxProduct ? quantities[lightboxProduct.id] || 0 : 0}
         onClose={() => setLightboxProduct(null)}
         onQuantityChange={handleQuantityChange}
+        onSelectProduct={setLightboxProduct}
         onEditProduct={handleOpenEditProduct}
       />
 

@@ -137,6 +137,13 @@ export const TRANSLATIONS = {
     currentCountLabel: (unit: string) => `Current Count (${unit})`,
     editInfo: 'Edit Info',
     backDone: 'Back / Done',
+    closeScannerAria: 'Close Handheld Scanner Mode',
+    prevProductBtn: 'Back',
+    nextProductBtn: 'Next',
+    prevProductAria: (name: string) => `Previous product in category: ${name}`,
+    nextProductAria: (name: string) => `Next product in category: ${name}`,
+    categoryPositionBadge: (index: number, total: number, cat: string) =>
+      `${index} of ${total} · ${cat}`,
     // Manage Catalog Modal
     backBtn: 'Back',
     editProductTitle: 'Edit Product',
@@ -291,6 +298,13 @@ export const TRANSLATIONS = {
     currentCountLabel: (unit: string) => `Conteo Actual (${unit})`,
     editInfo: 'Editar Info',
     backDone: 'Volver / Listo',
+    closeScannerAria: 'Cerrar Modo Escáner Manual',
+    prevProductBtn: 'Atrás',
+    nextProductBtn: 'Siguiente',
+    prevProductAria: (name: string) => `Producto anterior en la categoría: ${name}`,
+    nextProductAria: (name: string) => `Siguiente producto en la categoría: ${name}`,
+    categoryPositionBadge: (index: number, total: number, cat: string) =>
+      `${index} de ${total} · ${cat}`,
     // Manage Catalog Modal
     backBtn: 'Volver',
     editProductTitle: 'Editar Producto',
