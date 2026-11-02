@@ -1,4 +1,10 @@
 import type { Product } from '../data/products';
+import {
+  translateCategory,
+  translateProductName,
+  translateUnit,
+  type Locale,
+} from '../i18n/translations';
 
 export type QuantityMap = Record<string, number>;
 
@@ -55,7 +61,7 @@ export function getCategories(products: Product[]): string[] {
 }
 
 /**
- * Filters products by search query (matching Product Name or UPC) and selected category.
+ * Filters products by search query (matching Product Name or UPC in English or Spanish) and selected category.
  */
 export function filterProducts(
   products: Product[],
@@ -71,10 +77,21 @@ export function filterProducts(
 
     if (!normalizedQuery) return true;
 
-    const nameMatches = product.name.toLowerCase().includes(normalizedQuery);
+    const nameEn = product.name.toLowerCase();
+    const nameEs = translateProductName(product.name, 'es').toLowerCase();
+    const catEn = product.category.toLowerCase();
+    const catEs = translateCategory(product.category, 'es').toLowerCase();
     const upcMatches = product.upc.toLowerCase().includes(normalizedQuery);
-    const categoryMatches = product.category.toLowerCase().includes(normalizedQuery);
-    if (nameMatches || upcMatches || categoryMatches) return true;
+
+    if (
+      nameEn.includes(normalizedQuery) ||
+      nameEs.includes(normalizedQuery) ||
+      catEn.includes(normalizedQuery) ||
+      catEs.includes(normalizedQuery) ||
+      upcMatches
+    ) {
+      return true;
+    }
 
     // Also match across canonical 8-digit UPC-E and expanded 12-digit UPC-A equivalents
     const canonicalE = toCanonicalUpcE8(product.upc);
@@ -134,6 +151,7 @@ export interface SummaryFormatOptions {
   dateString: string;
   groupByCategory: boolean;
   includeUpc: boolean;
+  locale?: Locale;
 }
 
 /**
@@ -152,16 +170,23 @@ export function formatInventorySummaryText(
   quantities: QuantityMap,
   options: SummaryFormatOptions
 ): string {
+  const locale: Locale = options.locale || 'en';
   const counted = getCountedProducts(products, quantities);
-  const header = `📦 Inventory Count - ${options.dateString}`;
+  const header =
+    locale === 'es'
+      ? `📦 Conteo de Inventario - ${options.dateString}`
+      : `📦 Inventory Count - ${options.dateString}`;
 
   if (counted.length === 0) {
-    return `${header}\n\nNo items counted.`;
+    return locale === 'es'
+      ? `${header}\n\nSin artículos contados.`
+      : `${header}\n\nNo items counted.`;
   }
 
   const formatLine = (product: Product, quantity: number): string => {
     const upcPrefix = options.includeUpc ? `[${product.upc}] ` : '';
-    return `- ${upcPrefix}${product.name}: ${quantity}`;
+    const displayName = translateProductName(product.name, locale);
+    return `- ${upcPrefix}${displayName}: ${quantity}`;
   };
 
   if (!options.groupByCategory) {
@@ -178,7 +203,8 @@ export function formatInventorySummaryText(
 
   const sections: string[] = [];
   for (const [category, lines] of categoryMap.entries()) {
-    sections.push(`${category}\n${lines.join('\n')}`);
+    const displayCategory = translateCategory(category, locale);
+    sections.push(`${displayCategory}\n${lines.join('\n')}`);
   }
 
   return `${header}\n\n${sections.join('\n\n')}`;
@@ -549,7 +575,8 @@ export function updateProductInCatalog(
 export function formatInventoryCsv(
   products: Product[],
   quantities: QuantityMap,
-  dateString: string
+  dateString: string,
+  locale: Locale = 'en'
 ): string {
   const counted = getCountedProducts(products, quantities);
   const escapeCsv = (val: string | number): string => {
@@ -560,18 +587,21 @@ export function formatInventoryCsv(
     return str;
   };
 
-  const rows: string[] = [
-    ['Date', 'Category', 'Product Name', 'UPC', 'Unit', 'Quantity'].join(','),
-  ];
+  const headerCols =
+    locale === 'es'
+      ? ['Fecha', 'Categoría', 'Nombre del Producto', 'UPC', 'Unidad', 'Cantidad']
+      : ['Date', 'Category', 'Product Name', 'UPC', 'Unit', 'Quantity'];
+
+  const rows: string[] = [headerCols.join(',')];
 
   for (const { product, quantity } of counted) {
     rows.push(
       [
         escapeCsv(dateString),
-        escapeCsv(product.category),
-        escapeCsv(product.name),
+        escapeCsv(translateCategory(product.category, locale)),
+        escapeCsv(translateProductName(product.name, locale)),
         escapeCsv(product.upc),
-        escapeCsv(product.unit || 'Each'),
+        escapeCsv(translateUnit(product.unit || 'Each', locale)),
         escapeCsv(quantity),
       ].join(',')
     );

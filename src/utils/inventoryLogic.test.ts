@@ -60,10 +60,17 @@ test('computeInventoryMetrics accurately counts active products, total units, an
   assert.equal(metrics.categoryCounts['Supplies'], 0);
 });
 
-test('filterProducts filters by product name, UPC, and category', () => {
+test('filterProducts filters by product name (English and Spanish), UPC, and category', () => {
   const byName = filterProducts(INITIAL_PRODUCTS, 'oat milk', 'All');
   assert.equal(byName.length, 1);
   assert.equal(byName[0].id, 'col-01');
+
+  const bySpanishName = filterProducts(INITIAL_PRODUCTS, 'avena', 'All');
+  assert.equal(bySpanishName.length, 1);
+  assert.equal(bySpanishName[0].id, 'col-01');
+
+  const bySpanishCategory = filterProducts(INITIAL_PRODUCTS, 'bebidas', 'All');
+  assert.equal(bySpanishCategory.length, 3);
 
   const byUpc = filterProducts(INITIAL_PRODUCTS, '071641', 'All');
   assert.equal(byUpc.length, 1);
@@ -90,7 +97,7 @@ test('getCountedProducts strictly excludes items with quantity 0', () => {
   );
 });
 
-test('formatInventorySummaryText formats grouped and flat lists with optional UPC', () => {
+test('formatInventorySummaryText formats grouped and flat lists with optional UPC in English and Spanish', () => {
   const quantities = {
     'bev-01': 6,
     'bev-02': 2,
@@ -116,6 +123,26 @@ test('formatInventorySummaryText formats grouped and flat lists with optional UP
   ].join('\n');
 
   assert.equal(groupedDefault, expectedGrouped);
+
+  const groupedSpanish = formatInventorySummaryText(INITIAL_PRODUCTS, quantities, {
+    dateString: '30 oct 2026',
+    groupByCategory: true,
+    includeUpc: false,
+    locale: 'es',
+  });
+
+  const expectedGroupedSpanish = [
+    '📦 Conteo de Inventario - 30 oct 2026',
+    '',
+    'Bebidas',
+    '- Agua Mineral con Gas (24x355mL): 6',
+    '- Concentrado Cold Brew Espresso (6x1L): 2',
+    '',
+    'Refrigerados y Lácteos',
+    '- Leche de Avena Edición Barista (12x32oz): 9',
+  ].join('\n');
+
+  assert.equal(groupedSpanish, expectedGroupedSpanish);
 
   const flatWithUpc = formatInventorySummaryText(INITIAL_PRODUCTS, quantities, {
     dateString: 'Oct 30, 2026',

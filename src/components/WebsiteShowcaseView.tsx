@@ -14,6 +14,8 @@ import {
   ScanBarcode,
 } from 'lucide-react';
 import type { Product } from '../data/products';
+import { useLanguage } from '../i18n/LanguageContext';
+import { translateCategory } from '../i18n/translations';
 import {
   formatInventoryCsv,
   formatInventorySummaryText,
@@ -55,6 +57,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
   onExitWebsiteView,
   children,
 }) => {
+  const { locale, t } = useLanguage();
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
 
@@ -64,13 +67,14 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
     dateString: formattedDate,
     groupByCategory: true,
     includeUpc: false,
+    locale,
   });
 
   const handleCopySummary = async () => {
     try {
       await navigator.clipboard.writeText(plainTextSummary);
       setCopiedSummary(true);
-      setExportFeedback('Copied formatted inventory summary to clipboard!');
+      setExportFeedback(t.copiedToClipboard);
       window.setTimeout(() => setCopiedSummary(false), 2500);
     } catch {
       const ta = document.createElement('textarea');
@@ -80,13 +84,13 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
       document.execCommand('copy');
       document.body.removeChild(ta);
       setCopiedSummary(true);
-      setExportFeedback('Copied formatted inventory summary to clipboard!');
+      setExportFeedback(t.copiedToClipboard);
       window.setTimeout(() => setCopiedSummary(false), 2500);
     }
   };
 
   const handleDownloadCsv = () => {
-    const csvContent = formatInventoryCsv(products, quantities, formattedDate);
+    const csvContent = formatInventoryCsv(products, quantities, formattedDate, locale);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -96,7 +100,11 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setExportFeedback('Downloaded inventory count as CSV spreadsheet.');
+    setExportFeedback(
+      locale === 'es'
+        ? 'Conteo de inventario descargado como hoja de cálculo CSV.'
+        : 'Downloaded inventory count as CSV spreadsheet.'
+    );
   };
 
   const handleDownloadTxt = () => {
@@ -109,7 +117,11 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setExportFeedback('Downloaded plain-text inventory report.');
+    setExportFeedback(
+      locale === 'es'
+        ? 'Reporte de inventario en texto plano descargado.'
+        : 'Downloaded plain-text inventory report.'
+    );
   };
 
   return (
@@ -120,7 +132,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
           <div className="w-full max-w-[414px] flex items-center justify-between mb-2.5 px-1">
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               <Smartphone className="w-4 h-4" />
-              <span>Interactive Handheld PWA Frame (390px)</span>
+              <span>{t.interactiveHandheldFrame}</span>
             </div>
             <button
               type="button"
@@ -128,7 +140,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
               className="text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 flex items-center gap-1 touch-manipulation"
             >
               <Maximize2 className="w-3.5 h-3.5" />
-              <span>Full-Screen View</span>
+              <span>{t.fullScreenView}</span>
             </button>
           </div>
 
@@ -161,13 +173,13 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
               <div>
                 <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <ScanBarcode className="w-4 h-4" />
-                  <span>Interactive Web &amp; GitHub Pages Portal</span>
+                  <span>{t.portalBadge}</span>
                 </div>
                 <h2 className="mt-1 text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                  Daily Team Inventory Hub
+                  {t.portalTitle}
                 </h2>
                 <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-xl">
-                  Use the interactive mobile device on the left or manage categories, products, and spreadsheet exports directly from this web dashboard. All changes sync instantaneously to local storage.
+                  {t.portalDesc}
                 </p>
               </div>
 
@@ -177,7 +189,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                 className="min-h-[42px] px-4 py-2 rounded-2xl glass-pill text-slate-900 dark:text-white text-xs font-bold flex items-center gap-2 transition touch-manipulation select-none shrink-0"
               >
                 <Globe className="w-4 h-4 text-emerald-500" />
-                <span>GitHub Pages Setup</span>
+                <span>{t.githubPagesSetup}</span>
               </button>
             </div>
 
@@ -185,7 +197,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
             <div className="mt-5 grid grid-cols-3 gap-3 pt-5 border-t border-slate-200/60 dark:border-white/[0.08]">
               <div className="p-3.5 rounded-2xl glass-pill">
                 <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Products Counted
+                  {t.productsCounted}
                 </div>
                 <div className="mt-1 font-mono text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
                   {metrics.productsCounted}{' '}
@@ -197,7 +209,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
 
               <div className="p-3.5 rounded-2xl glass-pill">
                 <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Total Units
+                  {t.totalUnits}
                 </div>
                 <div className="mt-1 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
                   {metrics.totalUnits}
@@ -206,7 +218,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
 
               <div className="p-3.5 rounded-2xl glass-pill">
                 <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Active Categories
+                  {t.activeCategories}
                 </div>
                 <div className="mt-1 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
                   {
@@ -228,7 +240,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                 className="min-h-[42px] px-4 py-2 rounded-2xl futuristic-cta text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none"
               >
                 <Settings2 className="w-4 h-4" />
-                <span>+ Add / Edit Products</span>
+                <span>{t.addEditProducts}</span>
               </button>
 
               <button
@@ -237,7 +249,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                 className="min-h-[42px] px-4 py-2 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none"
               >
                 <FolderCog className="w-4 h-4 text-emerald-500" />
-                <span>Manage Categories</span>
+                <span>{t.manageCategories}</span>
               </button>
 
               <button
@@ -247,7 +259,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                 className="min-h-[42px] px-3.5 py-2 rounded-2xl bg-rose-500/10 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 disabled:opacity-40 text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Counts</span>
+                <span>{t.resetCounts}</span>
               </button>
             </div>
           </section>
@@ -262,7 +274,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Category Progress (Click to Filter Handheld View)
+                {t.categoryProgressTitle}
               </h3>
               {selectedCategory !== 'All' && (
                 <button
@@ -270,7 +282,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                   onClick={() => onSelectCategory('All')}
                   className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
                 >
-                  Show All Categories
+                  {t.showAllCategories}
                 </button>
               )}
             </div>
@@ -304,10 +316,10 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {cat}
+                        {translateCategory(cat, locale)}
                       </span>
                       <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-                        {countedInCat}/{itemsInCat.length} items · {unitsInCat}u
+                        {countedInCat}/{itemsInCat.length} · {unitsInCat}u
                       </span>
                     </div>
                     <div className="mt-2 w-full h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden">
@@ -333,12 +345,12 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                  Live Export &amp; Report Preview
+                  {t.liveExportTitle}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {countedList.length === 0
-                    ? 'Increment any product on the left to populate the live report.'
-                    : `${countedList.length} counted products ready for clipboard or CSV export.`}
+                    ? t.liveExportEmpty
+                    : t.liveExportReady(countedList.length)}
                 </p>
               </div>
 
@@ -351,12 +363,12 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                   {copiedSummary ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>Copied!</span>
+                      <span>{t.copiedShort}</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Text</span>
+                      <span>{t.copyText}</span>
                     </>
                   )}
                 </button>
@@ -367,7 +379,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                   className="min-h-[38px] px-3 py-1.5 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Download .CSV</span>
+                  <span>{t.downloadCsv}</span>
                 </button>
 
                 <button
@@ -376,7 +388,7 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
                   className="min-h-[38px] px-3 py-1.5 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none"
                 >
                   <FileText className="w-3.5 h-3.5 text-cyan-500" />
-                  <span>Download .TXT</span>
+                  <span>{t.downloadTxt}</span>
                 </button>
               </div>
             </div>
@@ -397,3 +409,4 @@ export const WebsiteShowcaseView: React.FC<WebsiteShowcaseViewProps> = ({
     </div>
   );
 };
+

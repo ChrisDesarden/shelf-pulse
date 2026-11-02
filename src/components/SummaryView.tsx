@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Copy, Check, Share2, Layers, List, Barcode } from 'lucide-react';
 import type { Product } from '../data/products';
+import { LanguageToggle, useLanguage } from '../i18n/LanguageContext';
+import {
+  translateCategory,
+  translateProductName,
+  translateUnit,
+} from '../i18n/translations';
 import {
   formatInventorySummaryText,
   getCountedProducts,
@@ -23,6 +29,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
   highContrast,
   onBackToEdit,
 }) => {
+  const { locale, t } = useLanguage();
   const [groupByCategory, setGroupByCategory] = useState(true);
   const [includeUpc, setIncludeUpc] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -35,6 +42,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
     dateString: formattedDate,
     groupByCategory,
     includeUpc,
+    locale,
   });
 
   const showToast = (msg: string) => {
@@ -79,10 +87,10 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 
     if (copiedOk) {
       setCopied(true);
-      showToast('Copied to Clipboard!');
+      showToast(t.copiedToClipboard);
       window.setTimeout(() => setCopied(false), 2500);
     } else {
-      showToast('Copy failed — please select and copy from the preview box.');
+      showToast(t.copyFailedToast);
     }
   };
 
@@ -90,17 +98,17 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Inventory Count - ${formattedDate}`,
+          title: t.shareTitle(formattedDate),
           text: plainTextSummary,
         });
-        showToast('Shared inventory summary.');
+        showToast(t.sharedToast);
         return;
       } catch (err) {
         if ((err as Error)?.name === 'AbortError') return;
       }
     }
     await handleCopy();
-    showToast('Share sheet unavailable on this browser — copied to clipboard instead!');
+    showToast(t.shareFallbackToast);
   };
 
   const groupedCountedItems = React.useMemo(() => {
@@ -123,26 +131,29 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             : 'glass-bar'
         }`}
       >
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onBackToEdit}
-            className={`min-h-[44px] px-3.5 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
+            className={`min-h-[40px] sm:min-h-[44px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
               highContrast
                 ? 'bg-slate-800 text-white border-2 border-white'
                 : 'glass-pill text-slate-900 dark:text-white'
             }`}
           >
-            <span>&lt;- Back to Edit</span>
+            <span>{t.backToEdit}</span>
           </button>
 
-          <div className="text-right min-w-0">
-            <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
-              Inventory Summary
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-              {countedItems.length} Products · {totalUnits} Total Units
-            </p>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="text-right min-w-0">
+              <h1 className="text-[13px] sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+                {t.inventorySummaryTitle}
+              </h1>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
+                {t.productsAndUnits(countedItems.length, totalUnits)}
+              </p>
+            </div>
+            <LanguageToggle highContrast={highContrast} />
           </div>
         </div>
       </header>
@@ -181,7 +192,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Group by Category</span>
+                <span>{t.groupByCategory}</span>
               </button>
               <button
                 type="button"
@@ -193,14 +204,14 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
-                <span>Flat List</span>
+                <span>{t.flatList}</span>
               </button>
             </div>
 
             <label className="min-h-[44px] px-3.5 py-2 rounded-2xl glass-pill flex items-center justify-between sm:justify-start gap-3 cursor-pointer touch-manipulation select-none">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
                 <Barcode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Include UPC in copied text</span>
+                <span>{t.includeUpcLabel}</span>
               </span>
               <input
                 type="checkbox"
@@ -216,7 +227,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           <section className="lg:col-span-7 space-y-4">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 px-1">
-              Counted Items ({countedItems.length})
+              {t.countedItemsHeader(countedItems.length)}
             </h2>
 
             {groupByCategory ? (
@@ -232,10 +243,10 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                   >
                     <div className="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-800/50 border-b border-slate-200/70 dark:border-white/[0.07] flex items-center justify-between">
                       <h3 className="text-xs font-extrabold tracking-wide text-slate-800 dark:text-slate-200">
-                        {category}
+                        {translateCategory(category, locale)}
                       </h3>
                       <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                        {entries.length} {entries.length === 1 ? 'item' : 'items'}
+                        {t.itemCountLabel(entries.length)}
                       </span>
                     </div>
 
@@ -247,7 +258,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                         >
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                              {product.name}
+                              {translateProductName(product.name, locale)}
                             </div>
                             <div className="mt-1 flex flex-wrap items-center gap-2">
                               <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
@@ -267,7 +278,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                               {quantity}
                             </div>
                             <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                              {product.unit || 'Units'}
+                              {translateUnit(product.unit, locale)}
                             </div>
                           </div>
                         </div>
@@ -291,10 +302,11 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {product.name}
+                        {translateProductName(product.name, locale)}
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">
-                        {product.category} · <span className="font-mono">UPC {product.upc}</span>
+                        {translateCategory(product.category, locale)} ·{' '}
+                        <span className="font-mono">UPC {product.upc}</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
@@ -302,7 +314,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                         {quantity}
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {product.unit || 'Units'}
+                        {translateUnit(product.unit, locale)}
                       </div>
                     </div>
                   </div>
@@ -317,7 +329,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                 htmlFor="plain-text-preview"
                 className="text-sm font-bold text-slate-700 dark:text-slate-300"
               >
-                Plain Text Preview (Exact Copy Output)
+                {t.plainTextPreviewLabel}
               </label>
             </div>
             <textarea
@@ -357,12 +369,12 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             {copied ? (
               <>
                 <Check className="w-5 h-5 stroke-[3]" />
-                <span>Copied to Clipboard!</span>
+                <span>{t.copiedToClipboard}</span>
               </>
             ) : (
               <>
                 <Copy className="w-5 h-5 stroke-[2.5]" />
-                <span>Copy to Clipboard</span>
+                <span>{t.copyToClipboard}</span>
               </>
             )}
           </button>
@@ -370,7 +382,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
           <button
             type="button"
             onClick={handleShare}
-            aria-label="Share inventory count"
+            aria-label={t.shareBtn}
             className={`min-h-[52px] px-5 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] touch-manipulation select-none shrink-0 ${
               highContrast
                 ? 'bg-slate-800 text-white border-2 border-white'
@@ -378,10 +390,11 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             }`}
           >
             <Share2 className="w-4 h-4" />
-            <span>Share...</span>
+            <span>{t.shareBtn}</span>
           </button>
         </div>
       </footer>
     </div>
   );
 };
+

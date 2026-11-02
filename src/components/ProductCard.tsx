@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Minus, Plus, Maximize2, Package, Pencil } from 'lucide-react';
 import type { Product } from '../data/products';
+import { useLanguage } from '../i18n/LanguageContext';
+import {
+  translateCategory,
+  translateProductName,
+  translateUnit,
+} from '../i18n/translations';
 import { BarcodeSVG } from './BarcodeSVG';
 
 interface ProductCardProps {
@@ -22,11 +28,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onOpenLightbox,
   onEditProduct,
 }) => {
+  const { locale, t } = useLanguage();
   const [imgError, setImgError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [draftValue, setDraftValue] = useState(String(quantity));
 
   const isActive = quantity > 0;
+  const displayName = translateProductName(product.name, locale);
+  const displayCategory = translateCategory(product.category, locale);
+  const displayUnit = product.unit ? translateUnit(product.unit, locale) : '';
 
   const handleDecrement = () => {
     if (quantity <= 0) return;
@@ -90,12 +100,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           className={`relative ${
             compact ? 'w-16 h-16' : 'w-16 h-16 sm:w-[76px] sm:h-[76px]'
           } rounded-2xl overflow-hidden shrink-0 bg-slate-100/80 dark:bg-slate-800/80 border border-white/60 dark:border-white/[0.1] shadow-xs group focus-visible:outline-2 focus-visible:outline-emerald-500 touch-manipulation select-none`}
-          aria-label={`Enlarge ${product.name} photo and barcode`}
+          aria-label={`Enlarge ${displayName} photo and barcode`}
         >
           {!imgError && product.image ? (
             <img
               src={product.image}
-              alt={product.name}
+              alt={displayName}
               referrerPolicy="no-referrer"
               onError={() => setImgError(true)}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -104,7 +114,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div className="w-full h-full flex flex-col items-center justify-center bg-slate-200/70 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 p-1.5 text-center">
               <Package className="w-6 h-6 mb-0.5 text-emerald-600 dark:text-emerald-400" />
               <span className="text-[10px] font-semibold leading-tight line-clamp-2">
-                {product.name}
+                {displayName}
               </span>
             </div>
           )}
@@ -122,14 +132,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 highContrast ? 'text-white' : 'text-slate-900 dark:text-slate-100'
               }`}
             >
-              {product.name}
+              {displayName}
             </h3>
 
             <button
               type="button"
               onClick={() => onEditProduct(product)}
-              aria-label={`Edit ${product.name}`}
-              title="Edit product details"
+              aria-label={`${t.editBtn} ${displayName}`}
+              title={t.editBtn}
               className={`min-w-[34px] min-h-[34px] p-1.5 rounded-xl flex items-center justify-center shrink-0 transition touch-manipulation select-none ${
                 highContrast
                   ? 'bg-slate-800 text-emerald-300 border border-slate-500 hover:bg-slate-700'
@@ -147,12 +157,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 : 'text-slate-500 dark:text-slate-400'
             }`}
           >
-            <span>{product.category}</span>
-            {product.unit && (
+            <span>{displayCategory}</span>
+            {displayUnit && (
               <>
                 <span aria-hidden="true">·</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                  {product.unit}
+                  {displayUnit}
                 </span>
               </>
             )}
@@ -175,7 +185,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 type="button"
                 onClick={() => onOpenLightbox(product)}
                 className="text-left focus-visible:outline-2 focus-visible:outline-emerald-500 rounded-lg touch-manipulation transition-opacity hover:opacity-90"
-                aria-label={`Scan barcode ${product.upc} for ${product.name}`}
+                aria-label={`Scan barcode ${product.upc} for ${displayName}`}
               >
                 <BarcodeSVG upc={product.upc} height={24} width={1.2} displayValue={false} />
               </button>

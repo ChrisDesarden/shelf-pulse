@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ScanBarcode,
 } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import {
   compressUpcAToUpcE8,
   computeUpcCheckDigit,
@@ -46,8 +47,9 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
   isOpen,
   onClose,
   onDetected,
-  title = 'Scan Product Barcode',
+  title,
 }) => {
+  const { locale, t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -176,7 +178,9 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
         if (!cancelled) {
           setCameraState('error');
           setCameraError(
-            'Live camera streaming is not supported in this browser context. Use "Scan from Photo" below.'
+            locale === 'es'
+              ? 'La cámara en vivo no está disponible en este navegador. Usa "Escanear de Foto" abajo.'
+              : 'Live camera streaming is not supported in this browser context. Use "Scan from Photo" below.'
           );
         }
         return;
@@ -220,7 +224,11 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
           setCameraState('error');
           setCameraError(
             err instanceof Error && err.name === 'NotAllowedError'
-              ? 'Camera permission was denied. Allow camera access or tap "Scan from Photo" below.'
+              ? locale === 'es'
+                ? 'Permiso de cámara denegado. Permite el acceso o toca "Escanear de Foto" abajo.'
+                : 'Camera permission was denied. Allow camera access or tap "Scan from Photo" below.'
+              : locale === 'es'
+              ? 'No se pudo acceder a la cámara. Puedes tomar una foto del código o probar abajo.'
               : 'Could not access camera stream. You can take a barcode photo or test scan below.'
           );
         }
@@ -234,14 +242,18 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
       if (scanIntervalId) window.clearInterval(scanIntervalId);
       stopCameraStream();
     };
-  }, [isOpen, facingMode]);
+  }, [isOpen, facingMode, locale]);
 
   if (!isOpen) return null;
+
+  const modalTitle = title || t.scannerMainTitle;
 
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhotoScanStatus('Scanning barcode from photo...');
+    setPhotoScanStatus(
+      locale === 'es' ? 'Escaneando código de barras de la foto...' : 'Scanning barcode from photo...'
+    );
 
     const imgUrl = URL.createObjectURL(file);
     const img = new Image();
@@ -249,17 +261,25 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
       const code = await decodeFrameSource(img, img.naturalWidth, img.naturalHeight);
       URL.revokeObjectURL(imgUrl);
       if (code) {
-        setPhotoScanStatus(`Detected ${getBarcodeFormatLabel(code)}: ${code}!`);
+        setPhotoScanStatus(
+          locale === 'es'
+            ? `¡Detectado ${getBarcodeFormatLabel(code)}: ${code}!`
+            : `Detected ${getBarcodeFormatLabel(code)}: ${code}!`
+        );
         triggerDetectedSuccess(code);
       } else {
         setPhotoScanStatus(
-          'Could not detect a clear barcode (UPC-E, EAN-8, or UPC-A) in that image. Try moving closer to the barcode.'
+          locale === 'es'
+            ? 'No se detectó un código de barras claro en esa imagen. Acércate más al código.'
+            : 'Could not detect a clear barcode (UPC-E, EAN-8, or UPC-A) in that image. Try moving closer to the barcode.'
         );
       }
     };
     img.onerror = () => {
       URL.revokeObjectURL(imgUrl);
-      setPhotoScanStatus('Failed to load image file.');
+      setPhotoScanStatus(
+        locale === 'es' ? 'Error al cargar la imagen.' : 'Failed to load image file.'
+      );
     };
     img.src = imgUrl;
     e.target.value = '';
@@ -297,11 +317,11 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Back from camera scanner"
+              aria-label={t.backBtn}
               className="min-h-[38px] px-2.5 py-1 rounded-2xl glass-pill text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none shrink-0"
             >
               <ArrowLeft className="w-4 h-4 shrink-0" />
-              <span>Back</span>
+              <span>{t.backBtn}</span>
             </button>
             <div className="min-w-0">
               <h2
@@ -309,7 +329,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
                 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 truncate"
               >
                 <ScanBarcode className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
-                <span className="truncate">{title}</span>
+                <span className="truncate">{modalTitle}</span>
               </h2>
             </div>
           </div>
@@ -317,7 +337,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close camera scanner"
+            aria-label={t.cancel}
             className="min-w-[38px] min-h-[38px] rounded-2xl glass-pill flex items-center justify-center text-slate-700 dark:text-slate-200 touch-manipulation select-none shrink-0"
           >
             <X className="w-5 h-5" />
@@ -344,8 +364,8 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
               <div className="w-full max-w-[260px] h-32 rounded-2xl border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(2,6,23,0.52)] relative flex items-center justify-center overflow-hidden">
                 <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#10b981]" />
               </div>
-              <span className="mt-2.5 px-2.5 py-1 rounded-full bg-slate-950/85 text-[11px] font-semibold text-emerald-300 border border-emerald-500/40">
-                Align barcode (Short UPC, UPC-E, EAN-8, or 12-Digit) inside box
+              <span className="mt-2.5 px-2.5 py-1 rounded-full bg-slate-950/85 text-[11px] font-semibold text-emerald-300 border border-emerald-500/40 text-center">
+                {t.alignBarcodeHint}
               </span>
             </div>
           )}
@@ -354,7 +374,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
               <Camera className="w-8 h-8 text-emerald-400 mb-2" />
               <p className="text-xs font-semibold text-slate-200">
-                Starting rear camera barcode scanner...
+                {t.startingCamera}
               </p>
             </div>
           )}
@@ -372,7 +392,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             <div className="absolute inset-0 bg-emerald-950/95 flex flex-col items-center justify-center p-4 text-center">
               <CheckCircle2 className="w-12 h-12 text-emerald-400 mb-2" />
               <div className="text-xs uppercase tracking-wider font-extrabold text-emerald-300">
-                Barcode Scanned!
+                {t.barcodeScannedBanner}
               </div>
               <div className="mt-1 font-mono text-xl font-extrabold text-white tracking-widest">
                 {scannedResult}
@@ -391,7 +411,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             className="min-h-[42px] px-3 py-2 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
           >
             <RefreshCw className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
-            <span>Flip Camera</span>
+            <span>{t.flipCamera}</span>
           </button>
 
           <button
@@ -400,7 +420,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             className="min-h-[42px] px-3 py-2 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
           >
             <ImageIcon className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400 shrink-0" />
-            <span>Scan from Photo</span>
+            <span>{t.scanFromPhoto}</span>
           </button>
           <input
             ref={fileInputRef}
@@ -428,7 +448,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
               className="min-h-[40px] px-2.5 py-1.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span>Test 8-Digit</span>
+              <span>{t.test8Digit}</span>
             </button>
             <button
               type="button"
@@ -437,7 +457,7 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
               className="min-h-[40px] px-2.5 py-1.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none whitespace-nowrap"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span>Test 12-Digit</span>
+              <span>{t.test12Digit}</span>
             </button>
           </div>
 
@@ -446,10 +466,11 @@ export const CameraBarcodeScannerModal: React.FC<CameraBarcodeScannerModalProps>
             onClick={onClose}
             className="min-h-[40px] px-4 py-1.5 rounded-2xl glass-pill text-slate-800 dark:text-white text-xs font-bold transition touch-manipulation select-none"
           >
-            Cancel
+            {t.cancel}
           </button>
         </div>
       </div>
     </div>
   );
 };
+

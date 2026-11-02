@@ -38,6 +38,8 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { WebsiteShowcaseView } from './components/WebsiteShowcaseView';
 import { GitHubDeployModal } from './components/GitHubDeployModal';
 import { CameraBarcodeScannerModal } from './components/CameraBarcodeScannerModal';
+import { LanguageToggle, useLanguage } from './i18n/LanguageContext';
+import { translateCategory, translateProductName } from './i18n/translations';
 
 const STORAGE_KEYS = {
   CATALOG: 'daily_inventory_catalog_v1',
@@ -51,6 +53,7 @@ type ThemeMode = 'light' | 'dark' | 'contrast';
 type LayoutMode = 'workspace' | 'website';
 
 export default function App() {
+  const { locale, t } = useLanguage();
   // Load persisted product catalog or fallback to INITIAL_PRODUCTS
   const [products, setProducts] = useState<Product[]>(() => {
     try {
@@ -302,14 +305,14 @@ export default function App() {
 
   const highContrast = themeMode === 'contrast';
 
-  // Formatted date for header & plain text export
+  // Formatted date for header & plain text export (localized to en-US or es-US)
   const formattedDate = useMemo(() => {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es-US' : 'en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     }).format(new Date());
-  }, []);
+  }, [locale]);
 
   // Live metrics
   const metrics = useMemo(
@@ -382,7 +385,7 @@ export default function App() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showBannerFeedback(
-      `Exported "${filename}" (${products.length} products, ${categories.length} categories, photos & barcodes).`
+      t.exportedBanner(filename, products.length, categories.length)
     );
   };
 
@@ -396,7 +399,7 @@ export default function App() {
         const result = parseCompleteBackup(String(reader.result || ''));
         handleImportCatalog(result.products, result.categories, result.quantities);
         showBannerFeedback(
-          `Imported ${result.products.length} products and ${result.categories.length} categories from "${file.name}"!`
+          t.importedBanner(result.products.length, result.categories.length, file.name)
         );
       } catch (err) {
         showBannerFeedback(
@@ -416,7 +419,9 @@ export default function App() {
     if (existing) {
       setSelectedCategory('All');
       setSearchQuery(scannedUpc);
-      showBannerFeedback(`Found "${existing.name}" (${scannedUpc}) in catalog.`);
+      showBannerFeedback(
+        t.foundInCatalogBanner(translateProductName(existing.name, locale), scannedUpc)
+      );
     } else {
       setEditingProduct(null);
       setScannedUpcForCreate(scannedUpc);
@@ -570,8 +575,8 @@ export default function App() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search name or UPC barcode..."
-                  aria-label="Search products by name or UPC"
+                  placeholder={t.searchPlaceholder}
+                  aria-label={t.searchAria}
                   className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-2xl text-sm transition focus:outline-2 focus:outline-emerald-500 ${
                     highContrast
                       ? 'bg-black text-white border-2 border-white placeholder:text-slate-400'
@@ -582,7 +587,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
+                    aria-label={t.clearSearchAria}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[34px] min-h-[34px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80 touch-manipulation select-none"
                   >
                     <X className="w-4 h-4" />
@@ -593,8 +598,8 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsMainScannerOpen(true)}
-                aria-label="Scan barcode with camera to find or add product"
-                title="Scan UPC barcode with camera"
+                aria-label={t.scanUpcAria}
+                title={t.scanUpcAria}
                 className={`min-h-[44px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition active:scale-[0.98] touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
                     ? 'bg-emerald-400 text-slate-950 border-2 border-white'
@@ -602,7 +607,7 @@ export default function App() {
                 }`}
               >
                 <Camera className="w-4 h-4 shrink-0" />
-                <span>Scan UPC</span>
+                <span>{t.scanUpc}</span>
               </button>
             </div>
 
@@ -619,6 +624,8 @@ export default function App() {
                     cat === 'All'
                       ? metrics.productsCounted
                       : metrics.categoryCounts[cat] || 0;
+                  const displayCat =
+                    cat === 'All' ? t.allCategory : translateCategory(cat, locale);
 
                   return (
                     <button
@@ -637,7 +644,7 @@ export default function App() {
                           : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
-                      <span>{cat}</span>
+                      <span>{displayCat}</span>
                       {activeCount > 0 && (
                         <span
                           className={`font-mono text-[11px] font-extrabold px-1.5 py-0.2 rounded-lg ${
@@ -661,7 +668,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleOpenManageCategories}
-                aria-label="Edit Categories"
+                aria-label={t.editCategories}
                 className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
                     ? 'bg-slate-900 text-emerald-300 border border-emerald-400'
@@ -669,13 +676,13 @@ export default function App() {
                 }`}
               >
                 <FolderCog className="w-3.5 h-3.5 shrink-0" />
-                <span>Edit Categories</span>
+                <span>{t.editCategories}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleDirectExportBackupFile}
-                aria-label="Export all data, categories, products, photos, and barcodes to a single file"
+                aria-label={t.exportData}
                 className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
                     ? 'bg-slate-900 text-emerald-300 border border-emerald-400'
@@ -683,13 +690,13 @@ export default function App() {
                 }`}
               >
                 <Download className="w-3.5 h-3.5 shrink-0" />
-                <span>Export Data</span>
+                <span>{t.exportData}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => quickImportInputRef.current?.click()}
-                aria-label="Import data file from another device"
+                aria-label={t.importData}
                 className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                   highContrast
                     ? 'bg-slate-900 text-white border border-white'
@@ -697,7 +704,7 @@ export default function App() {
                 }`}
               >
                 <Upload className="w-3.5 h-3.5 shrink-0" />
-                <span>Import Data</span>
+                <span>{t.importData}</span>
               </button>
             </div>
           </div>
@@ -730,12 +737,15 @@ export default function App() {
             <div className="my-12 max-w-md mx-auto text-center p-6 rounded-3xl glass-card">
               <PackageSearch className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                No matching products found
+                {t.noMatchingTitle}
               </h2>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {searchQuery
-                  ? `No items match "${searchQuery}" in ${selectedCategory}.`
-                  : `No products in category "${selectedCategory}" yet.`}
+                  ? t.noMatchingQuery(
+                      searchQuery,
+                      translateCategory(selectedCategory, locale)
+                    )
+                  : t.noMatchingCat(translateCategory(selectedCategory, locale))}
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 {searchQuery && (
@@ -744,7 +754,7 @@ export default function App() {
                     onClick={() => setSearchQuery('')}
                     className="min-h-[42px] px-4 py-2 rounded-2xl glass-pill text-xs font-bold text-slate-800 dark:text-slate-200 touch-manipulation select-none"
                   >
-                    Clear Search
+                    {t.clearSearch}
                   </button>
                 )}
                 <button
@@ -758,7 +768,7 @@ export default function App() {
                   }}
                   className="min-h-[42px] px-4 py-2 rounded-2xl futuristic-cta text-xs font-bold touch-manipulation select-none"
                 >
-                  + Add Product
+                  {t.addProductBtn}
                 </button>
               </div>
             </div>
@@ -766,8 +776,9 @@ export default function App() {
             <div className="space-y-6">
               {groupedProducts.map(({ category, items }) => {
                 const countedInGroup = metrics.categoryCounts[category] || 0;
+                const displayCat = translateCategory(category, locale);
                 return (
-                  <section key={category} aria-label={category} className="space-y-2.5">
+                  <section key={category} aria-label={displayCat} className="space-y-2.5">
                     <div className="flex items-center justify-between px-1.5">
                       <h2
                         className={`text-sm sm:text-base font-extrabold tracking-tight ${
@@ -776,10 +787,10 @@ export default function App() {
                             : 'text-slate-800 dark:text-slate-100'
                         }`}
                       >
-                        {category}
+                        {displayCat}
                       </h2>
                       <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                        {countedInGroup} of {items.length} counted
+                        {t.countedOfTotal(countedInGroup, items.length)}
                       </span>
                     </div>
 
@@ -805,9 +816,12 @@ export default function App() {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between px-1.5">
                 <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                  Showing {filteredProducts.length}{' '}
-                  {filteredProducts.length === 1 ? 'product' : 'products'}
-                  {selectedCategory !== 'All' ? ` in ${selectedCategory}` : ''}
+                  {t.showingProducts(
+                    filteredProducts.length,
+                    selectedCategory !== 'All'
+                      ? translateCategory(selectedCategory, locale)
+                      : undefined
+                  )}
                 </h2>
               </div>
 
@@ -845,7 +859,7 @@ export default function App() {
               type="button"
               onClick={() => setIsResetConfirmOpen(true)}
               disabled={metrics.productsCounted === 0}
-              aria-label="Reset all quantities"
+              aria-label={t.resetAria}
               className={`min-h-[44px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 metrics.productsCounted === 0
                   ? 'glass-pill text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
@@ -855,7 +869,7 @@ export default function App() {
               }`}
             >
               <RotateCcw className="w-4 h-4 shrink-0" />
-              <span>Reset</span>
+              <span>{t.reset}</span>
             </button>
 
             {/* Center: Live Counter showing X Products Counted and Y Total Units */}
@@ -869,7 +883,7 @@ export default function App() {
                 <span className="font-mono text-emerald-600 dark:text-emerald-400 font-extrabold">
                   {metrics.productsCounted}
                 </span>{' '}
-                Products Counted
+                {t.productsCounted}
               </div>
               {!insidePhoneFrame && (
                 <span
@@ -883,7 +897,7 @@ export default function App() {
                 <span className="font-mono text-slate-900 dark:text-white font-extrabold">
                   {metrics.totalUnits}
                 </span>{' '}
-                Total Units
+                {t.totalUnits}
               </div>
             </div>
 
@@ -900,7 +914,7 @@ export default function App() {
                   : 'futuristic-cta'
               }`}
             >
-              <span>Finish Work -&gt;</span>
+              <span>{t.finishWork}</span>
             </button>
           </div>
         </footer>
@@ -937,14 +951,14 @@ export default function App() {
             : 'glass-bar'
         }`}
       >
-        <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 flex items-center justify-between gap-2">
+        <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-2">
           {/* Left: App Title & Formatted Date */}
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2 min-w-0 flex-1 pr-2">
-            <h1 className="text-sm sm:text-lg font-extrabold tracking-tight leading-tight text-slate-900 dark:text-white truncate">
-              Daily Inventory
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2 min-w-0 flex-1">
+            <h1 className="text-[13px] sm:text-lg font-extrabold tracking-tight leading-tight text-slate-900 dark:text-white truncate">
+              {t.appTitle}
             </h1>
             <span
-              className={`text-[11px] sm:text-xs font-mono leading-tight truncate ${
+              className={`text-[10px] sm:text-xs font-mono leading-tight truncate ${
                 highContrast
                   ? 'text-emerald-300 font-bold'
                   : 'text-slate-500 dark:text-slate-400'
@@ -957,8 +971,10 @@ export default function App() {
             </span>
           </div>
 
-          {/* Right: Desktop Website View Toggle (lg+), Export Backup, GitHub Setup, Install PWA, Theme Mode, Manage Catalog */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Right: Quick-Access Bilingual Toggle (EN | ES), Desktop Website View Toggle, GitHub Setup, Install PWA, Theme Mode, Manage Catalog */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <LanguageToggle highContrast={highContrast} />
+
             <button
               type="button"
               onClick={() =>
@@ -966,10 +982,8 @@ export default function App() {
                   prev === 'workspace' ? 'website' : 'workspace'
                 )
               }
-              aria-label={
-                isFramed ? 'Switch to Full Workspace' : 'Switch to Website View'
-              }
-              title="Toggle Interactive Website Showcase & Handheld Frame"
+              aria-label={isFramed ? t.fullView : t.websiteView}
+              title={isFramed ? t.fullView : t.websiteView}
               className={`hidden lg:flex min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 isFramed
                   ? 'futuristic-cta'
@@ -977,7 +991,7 @@ export default function App() {
               }`}
             >
               <Layout className="w-3.5 h-3.5 shrink-0" />
-              <span>{isFramed ? 'Full View' : 'Website View'}</span>
+              <span>{isFramed ? t.fullView : t.websiteView}</span>
             </button>
 
             <button
@@ -988,7 +1002,7 @@ export default function App() {
               className="hidden sm:flex min-h-[40px] px-2.5 py-1.5 rounded-2xl glass-pill text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-bold items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span className="hidden lg:inline">GitHub</span>
+              <span className="hidden lg:inline">{t.github}</span>
             </button>
 
             <PWAInstallButton />
@@ -998,7 +1012,7 @@ export default function App() {
               onClick={cycleThemeMode}
               aria-label={`Switch display mode (current: ${themeMode})`}
               title="Toggle Light / Dark / High-Contrast Warehouse Mode"
-              className={`min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              className={`min-w-[38px] sm:min-w-[40px] min-h-[38px] sm:min-h-[40px] px-2 py-1.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 highContrast
                   ? 'bg-emerald-400 text-slate-950 border-2 border-white'
                   : 'glass-pill text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
@@ -1012,15 +1026,15 @@ export default function App() {
             <button
               type="button"
               onClick={handleOpenManageProducts}
-              aria-label="Manage Catalog"
-              className={`min-h-[40px] px-3 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
+              aria-label={t.catalog}
+              className={`min-h-[38px] sm:min-h-[40px] px-2 sm:px-3 py-1.5 rounded-2xl text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0 ${
                 highContrast
                   ? 'bg-slate-900 text-white border-2 border-white hover:bg-slate-800'
                   : 'glass-pill text-slate-800 dark:text-slate-100 hover:border-emerald-500/40'
               }`}
             >
-              <Settings2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
-              <span>Catalog</span>
+              <Settings2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
+              <span>{t.catalog}</span>
             </button>
           </div>
         </div>
@@ -1088,7 +1102,7 @@ export default function App() {
         isOpen={isMainScannerOpen}
         onClose={() => setIsMainScannerOpen(false)}
         onDetected={handleMainScannerDetected}
-        title="Scan Barcode to Find or Create Product"
+        title={t.scannerMainTitle}
       />
 
       {/* GitHub Push & GitHub Pages Deployment Modal */}
@@ -1117,10 +1131,10 @@ export default function App() {
               id="reset-confirm-title"
               className="text-lg font-extrabold text-slate-900 dark:text-white"
             >
-              Clear all quantities for today?
+              {t.resetConfirmTitle}
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-              This will reset all {metrics.productsCounted} counted products ({metrics.totalUnits} total units) back to 0. Custom catalog items will be kept.
+              {t.resetConfirmDesc(metrics.productsCounted, metrics.totalUnits)}
             </p>
             <div className="mt-5 flex items-center gap-2.5">
               <button
@@ -1128,14 +1142,14 @@ export default function App() {
                 onClick={() => setIsResetConfirmOpen(false)}
                 className="flex-1 min-h-[44px] rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-sm font-bold transition touch-manipulation select-none"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReset}
                 className="flex-1 min-h-[44px] rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition touch-manipulation select-none shadow-md shadow-rose-600/25"
               >
-                Clear All
+                {t.clearAll}
               </button>
             </div>
           </div>

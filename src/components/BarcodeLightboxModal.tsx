@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { X, Minus, Plus, Package, ScanBarcode, Pencil, ArrowLeft } from 'lucide-react';
 import type { Product } from '../data/products';
+import { useLanguage } from '../i18n/LanguageContext';
+import {
+  translateBarcodeLabel,
+  translateCategory,
+  translateProductName,
+  translateUnit,
+} from '../i18n/translations';
 import { getBarcodeFormatLabel } from '../utils/inventoryLogic';
 import { BarcodeSVG } from './BarcodeSVG';
 
@@ -19,9 +26,14 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
   onQuantityChange,
   onEditProduct,
 }) => {
+  const { locale, t } = useLanguage();
   const [imgError, setImgError] = useState(false);
 
   if (!product) return null;
+
+  const displayName = translateProductName(product.name, locale);
+  const displayCategory = translateCategory(product.category, locale);
+  const displayUnit = translateUnit(product.unit, locale);
 
   return (
     <div
@@ -40,20 +52,22 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
               <ScanBarcode className="w-4 h-4 shrink-0" />
-              <span>Handheld Scanner Mode</span>
+              <span>{t.handheldScannerMode}</span>
             </div>
             <h2
               id="lightbox-product-title"
               className="mt-1 text-base sm:text-xl font-bold leading-snug text-slate-900 dark:text-white"
             >
-              {product.name}
+              {displayName}
             </h2>
             <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <span>{product.category}</span>
+              <span>{displayCategory}</span>
               {product.unit && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>Unit: {product.unit}</span>
+                  <span>
+                    {t.unitPrefix} {displayUnit}
+                  </span>
                 </>
               )}
             </div>
@@ -62,7 +76,7 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close scanner lightbox"
+            aria-label={t.backDone}
             className="min-w-[42px] min-h-[42px] rounded-2xl glass-pill flex items-center justify-center text-slate-700 dark:text-slate-200 transition touch-manipulation select-none shrink-0"
           >
             <X className="w-5 h-5" />
@@ -74,7 +88,7 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
           {!imgError && product.image ? (
             <img
               src={product.image}
-              alt={product.name}
+              alt={displayName}
               referrerPolicy="no-referrer"
               onError={() => setImgError(true)}
               className="w-full h-full object-cover"
@@ -82,7 +96,7 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center p-4 text-center text-slate-500">
               <Package className="w-10 h-10 text-emerald-500 mb-1.5" />
-              <span className="text-xs font-semibold">{product.name}</span>
+              <span className="text-xs font-semibold">{displayName}</span>
             </div>
           )}
         </div>
@@ -100,21 +114,21 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
             />
           </div>
           <div className="mt-1 font-mono text-xs font-semibold text-slate-600 tracking-widest">
-            {getBarcodeFormatLabel(product.upc)} / {product.upc}
+            {translateBarcodeLabel(getBarcodeFormatLabel(product.upc), locale)} / {product.upc}
           </div>
         </div>
 
         {/* Quick Quantity Adjustment inside Lightbox */}
         <div className="mt-3.5 flex items-center justify-between gap-2.5 pt-3 border-t border-slate-200/70 dark:border-white/[0.08]">
           <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
-            Current Count ({product.unit || 'Units'})
+            {t.currentCountLabel(displayUnit)}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onQuantityChange(product.id, Math.max(0, quantity - 1))}
               disabled={quantity <= 0}
-              aria-label={`Decrease lightbox quantity for ${product.name}`}
+              aria-label={`Decrease lightbox quantity for ${displayName}`}
               className="min-w-[42px] min-h-[42px] rounded-2xl glass-pill text-slate-900 dark:text-white disabled:opacity-40 flex items-center justify-center touch-manipulation select-none"
             >
               <Minus className="w-5 h-5" />
@@ -125,7 +139,7 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
             <button
               type="button"
               onClick={() => onQuantityChange(product.id, quantity + 1)}
-              aria-label={`Increase lightbox quantity for ${product.name}`}
+              aria-label={`Increase lightbox quantity for ${displayName}`}
               className="min-w-[42px] min-h-[42px] rounded-2xl futuristic-cta flex items-center justify-center touch-manipulation select-none"
             >
               <Plus className="w-5 h-5" />
@@ -145,7 +159,7 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
               className="min-h-[44px] px-3.5 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition touch-manipulation select-none shrink-0"
             >
               <Pencil className="w-3.5 h-3.5" />
-              <span>Edit Info</span>
+              <span>{t.editInfo}</span>
             </button>
           )}
           <button
@@ -154,10 +168,11 @@ export const BarcodeLightboxModal: React.FC<BarcodeLightboxModalProps> = ({
             className="flex-1 min-h-[44px] rounded-2xl futuristic-cta font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back / Done</span>
+            <span>{t.backDone}</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
+

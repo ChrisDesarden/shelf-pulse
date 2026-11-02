@@ -38,6 +38,13 @@ import {
 } from '../utils/inventoryLogic';
 import { BarcodeSVG } from './BarcodeSVG';
 import { CameraBarcodeScannerModal } from './CameraBarcodeScannerModal';
+import { useLanguage } from '../i18n/LanguageContext';
+import {
+  translateBarcodeLabel,
+  translateCategory,
+  translateProductName,
+  translateUnit,
+} from '../i18n/translations';
 
 export type CatalogModalTab = 'products' | 'categories' | 'json';
 
@@ -98,6 +105,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
   onImportCatalog,
   onResetCatalogToDefaults,
 }) => {
+  const { locale, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<CatalogModalTab>(initialTab);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
@@ -415,7 +423,9 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
     if (!q) return true;
     return (
       p.name.toLowerCase().includes(q) ||
+      translateProductName(p.name, 'es').toLowerCase().includes(q) ||
       p.category.toLowerCase().includes(q) ||
+      translateCategory(p.category, 'es').toLowerCase().includes(q) ||
       p.upc.includes(q)
     );
   });
@@ -439,11 +449,11 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Back to inventory"
+                aria-label={t.backBtn}
                 className="min-h-[40px] px-2.5 py-1.5 rounded-2xl glass-pill text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none shrink-0"
               >
                 <ArrowLeft className="w-4 h-4 shrink-0" />
-                <span>Back</span>
+                <span>{t.backBtn}</span>
               </button>
               <div className="min-w-0">
                 <h2
@@ -451,11 +461,11 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                   className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white truncate"
                 >
                   {isSingleProductQuickEdit
-                    ? 'Edit Product'
-                    : 'Manage Catalog & Data'}
+                    ? t.editProductTitle
+                    : t.manageCatalogTitle}
                 </h2>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                  {products.length} products · {categories.length} categories
+                  {t.catalogSubheader(products.length, categories.length)}
                 </p>
               </div>
             </div>
@@ -463,7 +473,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close catalog manager"
+              aria-label={t.doneAndCloseBtn}
               className="min-w-[40px] min-h-[40px] rounded-2xl glass-pill flex items-center justify-center text-slate-700 dark:text-slate-200 touch-manipulation select-none shrink-0"
             >
               <X className="w-5 h-5" />
@@ -481,7 +491,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                   : 'glass-pill text-slate-600 dark:text-slate-300'
               }`}
             >
-              Products ({products.length})
+              {t.tabProducts(products.length)}
             </button>
             <button
               type="button"
@@ -492,7 +502,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                   : 'glass-pill text-slate-600 dark:text-slate-300'
               }`}
             >
-              Categories ({categories.length})
+              {t.tabCategories(categories.length)}
             </button>
             <button
               type="button"
@@ -506,7 +516,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                   : 'glass-pill text-slate-600 dark:text-slate-300'
               }`}
             >
-              Export / Import
+              {t.tabExportImport}
             </button>
           </div>
 
@@ -524,7 +534,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                      {editingProductId ? 'Edit Product Information' : 'Add New Product'}
+                      {editingProductId ? t.editProductInfoHeading : t.addNewProductHeading}
                     </h3>
                     {editingProductId && (
                       <button
@@ -532,7 +542,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         onClick={() => resetProductFormToCreate()}
                         className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline touch-manipulation whitespace-nowrap"
                       >
-                        + Switch to New Product
+                        {t.switchToNewProduct}
                       </button>
                     )}
                   </div>
@@ -542,13 +552,13 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       htmlFor="new-product-name"
                       className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
                     >
-                      Product Name *
+                      {t.productNameLabel}
                     </label>
                     <input
                       id="new-product-name"
                       type="text"
                       required
-                      placeholder="e.g., Almond Croissant Tray (24ct)"
+                      placeholder={t.productNamePlaceholder}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full min-h-[42px] px-3 py-2 rounded-2xl glass-input text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
@@ -561,7 +571,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         htmlFor="new-product-category"
                         className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
                       >
-                        Category *
+                        {t.categoryLabel}
                       </label>
                       <select
                         id="new-product-category"
@@ -571,11 +581,11 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       >
                         {categories.map((cat) => (
                           <option key={cat} value={cat} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                            {cat}
+                            {translateCategory(cat, locale)}
                           </option>
                         ))}
                         <option value="__custom__" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                          + New Category...
+                          {t.newCategoryOption}
                         </option>
                       </select>
                     </div>
@@ -585,12 +595,12 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         htmlFor="new-product-unit"
                         className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
                       >
-                        Counting Unit
+                        {t.countingUnitLabel}
                       </label>
                       <input
                         id="new-product-unit"
                         type="text"
-                        placeholder="Case, Each, Box, Bag..."
+                        placeholder={t.countingUnitPlaceholder}
                         value={unit}
                         onChange={(e) => setUnit(e.target.value)}
                         className="w-full min-h-[42px] px-3 py-2 rounded-2xl glass-input text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
@@ -604,12 +614,12 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         htmlFor="new-product-custom-category"
                         className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
                       >
-                        New Category Name *
+                        {t.newCategoryNameLabel}
                       </label>
                       <input
                         id="new-product-custom-category"
                         type="text"
-                        placeholder="e.g., Walk-In Freezer"
+                        placeholder={t.newCategoryPlaceholder}
                         value={customCategory}
                         onChange={(e) => setCustomCategory(e.target.value)}
                         className="w-full min-h-[42px] px-3 py-2 rounded-2xl glass-input text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
@@ -624,7 +634,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         htmlFor="new-product-upc"
                         className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                       >
-                        UPC / Barcode (Short, 8, or 12-Digit) *
+                        {t.upcBarcodeLabel}
                       </label>
                       <div className="flex items-center gap-2.5">
                         <button
@@ -634,7 +644,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                           className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 touch-manipulation whitespace-nowrap"
                         >
                           <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                          <span>8-Digit UPC-E</span>
+                          <span>{t.upcE8Btn}</span>
                         </button>
                         <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">
                           |
@@ -645,7 +655,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                           className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 touch-manipulation whitespace-nowrap"
                         >
                           <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                          <span>12-Digit UPC-A</span>
+                          <span>{t.upcA12Btn}</span>
                         </button>
                       </div>
                     </div>
@@ -658,18 +668,18 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         maxLength={14}
                         value={upc}
                         onChange={(e) => setUpc(e.target.value.replace(/\D/g, ''))}
-                        placeholder="e.g. 4–8 digit short UPC or 12-digit UPC"
+                        placeholder={t.upcInputPlaceholder}
                         className="flex-1 min-w-0 min-h-[42px] px-3 py-2 rounded-2xl glass-input font-mono text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
                       />
                       <button
                         type="button"
                         onClick={() => setIsCameraScannerOpen(true)}
                         data-testid="open-camera-scanner-btn"
-                        aria-label="Scan barcode with camera"
+                        aria-label={t.scanBarcodeBtn}
                         className="min-h-[42px] px-3.5 py-2 rounded-2xl futuristic-cta active:scale-[0.98] text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
                       >
                         <Camera className="w-4 h-4 shrink-0" />
-                        <span>Scan Barcode</span>
+                        <span>{t.scanBarcodeBtn}</span>
                       </button>
                     </div>
 
@@ -678,7 +688,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-col min-w-0">
                             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 truncate">
-                              {getBarcodeFormatLabel(upc)}
+                              {translateBarcodeLabel(getBarcodeFormatLabel(upc), locale)}
                             </span>
                             {toCanonicalUpcE8(upc) ? (
                               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
@@ -686,7 +696,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                               </span>
                             ) : (
                               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                                Scannable Preview
+                                {t.scannablePreview}
                               </span>
                             )}
                           </div>
@@ -696,7 +706,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                               onClick={() => setUpc(toCanonicalUpcE8(upc) || upc)}
                               className="px-2 py-1 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold font-mono transition touch-manipulation shrink-0"
                             >
-                              Use {toCanonicalUpcE8(upc)}
+                              {t.useCanonicalUpc(toCanonicalUpcE8(upc) || upc)}
                             </button>
                           )}
                         </div>
@@ -720,7 +730,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         htmlFor="new-product-image"
                         className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                       >
-                        Photo / Thumbnail URL (Optional)
+                        {t.photoUrlLabel}
                       </label>
                       <button
                         type="button"
@@ -728,13 +738,13 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 touch-manipulation whitespace-nowrap"
                       >
                         <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-                        <span>Generate Graphic</span>
+                        <span>{t.generateGraphicBtn}</span>
                       </button>
                     </div>
                     <input
                       id="new-product-image"
                       type="text"
-                      placeholder="Paste image URL or click Generate Graphic"
+                      placeholder={t.photoUrlPlaceholder}
                       value={image}
                       onChange={(e) => setImage(e.target.value)}
                       className="w-full min-h-[42px] px-3 py-2 rounded-2xl glass-input text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
@@ -762,12 +772,12 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       {editingProductId ? (
                         <>
                           <Save className="w-4 h-4 stroke-[2.5] shrink-0" />
-                          <span>Save Changes</span>
+                          <span>{t.saveChangesBtn}</span>
                         </>
                       ) : (
                         <>
                           <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
-                          <span>Add Product</span>
+                          <span>{t.addProductSubmitBtn}</span>
                         </>
                       )}
                     </button>
@@ -779,7 +789,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                           onClick={handleCancelEdit}
                           className="min-h-[44px] px-3.5 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center transition touch-manipulation select-none"
                         >
-                          Cancel
+                          {t.cancel}
                         </button>
 
                         <button
@@ -793,11 +803,11 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                               setFormSuccess('Product removed from catalog.');
                             }
                           }}
-                          aria-label="Delete currently edited product"
+                          aria-label={t.deleteBtn}
                           className="min-h-[44px] px-3 rounded-2xl bg-rose-500/12 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1 transition touch-manipulation select-none"
                         >
                           <Trash2 className="w-4 h-4 shrink-0" />
-                          <span>Delete</span>
+                          <span>{t.deleteBtn}</span>
                         </button>
                       </>
                     )}
@@ -808,7 +818,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                 <div className="space-y-2.5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      All Products in Catalog ({products.length})
+                      {t.allProductsInCatalog(products.length)}
                     </h3>
                     <div className="relative flex-1 sm:max-w-xs">
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -816,8 +826,8 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         type="text"
                         value={catalogSearch}
                         onChange={(e) => setCatalogSearch(e.target.value)}
-                        placeholder="Filter catalog to edit..."
-                        aria-label="Filter catalog products"
+                        placeholder={t.filterCatalogPlaceholder}
+                        aria-label={t.filterCatalogPlaceholder}
                         className="w-full min-h-[36px] pl-8 pr-3 py-1 rounded-2xl glass-input text-xs text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
                       />
                     </div>
@@ -826,6 +836,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                   <div className="divide-y divide-slate-200/60 dark:divide-white/[0.06] rounded-3xl glass-pill overflow-hidden">
                     {filteredCatalogProducts.map((p) => {
                       const isBeingEdited = editingProductId === p.id;
+                      const displayPName = translateProductName(p.name, locale);
                       return (
                         <div
                           key={p.id}
@@ -837,12 +848,12 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                         >
                           <div className="min-w-0 flex-1">
                             <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                              {p.name}
+                              {displayPName}
                             </div>
                             <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-1">
-                              <span>{p.category}</span>
+                              <span>{translateCategory(p.category, locale)}</span>
                               <span aria-hidden="true">·</span>
-                              <span>{p.unit || 'Each'}</span>
+                              <span>{translateUnit(p.unit || 'Each', locale)}</span>
                               <span aria-hidden="true">·</span>
                               <span className="font-mono">{p.upc}</span>
                             </div>
@@ -856,7 +867,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                               className="min-h-[36px] px-2.5 py-1.5 rounded-xl glass-pill hover:bg-emerald-600 hover:text-white text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition touch-manipulation select-none"
                             >
                               <Pencil className="w-3.5 h-3.5" />
-                              <span>Edit</span>
+                              <span>{t.editBtn}</span>
                             </button>
                             <button
                               type="button"
@@ -886,7 +897,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                     htmlFor="add-category-input"
                     className="block text-xs font-bold text-slate-700 dark:text-slate-300"
                   >
-                    Create New Category
+                    {t.createNewCategoryLabel}
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -894,7 +905,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="e.g., Walk-In Freezer..."
+                      placeholder={t.newCategoryPlaceholder}
                       className="flex-1 min-w-0 min-h-[42px] px-3 py-2 rounded-2xl glass-input text-sm text-slate-900 dark:text-white focus:outline-2 focus:outline-emerald-500"
                     />
                     <button
@@ -902,7 +913,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       className="min-h-[42px] px-3.5 py-2 rounded-2xl futuristic-cta text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none whitespace-nowrap shrink-0"
                     >
                       <FolderPlus className="w-4 h-4 shrink-0" />
-                      <span>Add Category</span>
+                      <span>{t.addCategoryBtn}</span>
                     </button>
                   </div>
                 </form>
@@ -917,7 +928,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                 {/* Categories List with Rename, Reorder, and Delete */}
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
-                    Existing Categories (Rename, Reorder, or Remove)
+                    {t.existingCategoriesHeader}
                   </div>
 
                   <div className="divide-y divide-slate-200/60 dark:divide-white/[0.06] rounded-3xl glass-pill overflow-hidden">
@@ -955,24 +966,24 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                                 className="min-h-[38px] px-2.5 py-1 rounded-2xl futuristic-cta text-xs font-bold flex items-center gap-1 touch-manipulation select-none shrink-0"
                               >
                                 <Check className="w-3.5 h-3.5" />
-                                <span>Save</span>
+                                <span>{t.saveBtn}</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditingCategoryOriginal(null)}
                                 className="min-h-[38px] px-2.5 py-1 rounded-2xl glass-pill text-slate-600 dark:text-slate-300 text-xs font-semibold touch-manipulation select-none shrink-0"
                               >
-                                Cancel
+                                {t.cancel}
                               </button>
                             </div>
                           ) : (
                             <>
                               <div className="min-w-0 flex-1">
                                 <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                                  {cat}
+                                  {translateCategory(cat, locale)}
                                 </div>
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                  {itemCount} {itemCount === 1 ? 'product' : 'products'}
+                                  {t.productCountSingularPlural(itemCount)}
                                 </div>
                               </div>
 
@@ -1002,7 +1013,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                                   className="min-h-[32px] px-2 py-1 rounded-xl glass-pill hover:bg-emerald-600 hover:text-white text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition touch-manipulation select-none"
                                 >
                                   <Pencil className="w-3 h-3" />
-                                  <span>Rename</span>
+                                  <span>{t.renameBtn}</span>
                                 </button>
                                 <button
                                   type="button"
@@ -1035,10 +1046,18 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                     <FileJson className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <div>
                       <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
-                        Share Complete Data File with Team
+                        {t.shareCompleteDataTitle}
                       </h3>
                       <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
-                        Export all <strong>{categories.length} categories</strong>, <strong>{products.length} products</strong>, <strong>photo links</strong>, and <strong>UPC barcodes (short &amp; 12-digit)</strong> into a single <code className="font-mono">.json</code> file so anyone can import your exact catalog in one tap.
+                        {locale === 'es' ? (
+                          <>
+                            Exporta las <strong>{categories.length} categorías</strong>, <strong>{products.length} productos</strong>, <strong>enlaces de fotos</strong> y <strong>códigos UPC (cortos y de 12 dígitos)</strong> en un solo archivo <code className="font-mono">.json</code> para que cualquiera importe tu catálogo exacto con un toque.
+                          </>
+                        ) : (
+                          <>
+                            Export all <strong>{categories.length} categories</strong>, <strong>{products.length} products</strong>, <strong>photo links</strong>, and <strong>UPC barcodes (short &amp; 12-digit)</strong> into a single <code className="font-mono">.json</code> file so anyone can import your exact catalog in one tap.
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1052,7 +1071,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       className="min-h-[44px] px-3 py-2 rounded-2xl futuristic-cta text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
                     >
                       <Download className="w-4 h-4 shrink-0" />
-                      <span>Export Data File</span>
+                      <span>{t.exportDataFileBtn}</span>
                     </button>
 
                     <button
@@ -1062,7 +1081,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       className="min-h-[44px] px-3 py-2 rounded-2xl glass-pill text-slate-900 dark:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
                     >
                       <Upload className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>Import Data File</span>
+                      <span>{t.importDataFileBtn}</span>
                     </button>
 
                     <button
@@ -1071,7 +1090,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       className="min-h-[44px] px-3 py-2 rounded-2xl glass-pill text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition touch-manipulation select-none"
                     >
                       <Share2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>Share Backup...</span>
+                      <span>{t.shareBackupBtn}</span>
                     </button>
                   </div>
 
@@ -1097,14 +1116,14 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                       htmlFor="catalog-json-textarea"
                       className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                     >
-                      Or Paste / Inspect Raw Backup JSON
+                      {t.orPasteRawJsonLabel}
                     </label>
                     <button
                       type="button"
                       onClick={() => applyImportedJsonString(jsonText, 'pasted JSON')}
                       className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline touch-manipulation"
                     >
-                      Apply Pasted JSON
+                      {t.applyPastedJsonBtn}
                     </button>
                   </div>
                   <textarea
@@ -1118,7 +1137,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
 
                 <div className="pt-2 border-t border-slate-200/70 dark:border-white/[0.08] flex items-center justify-between gap-2">
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Restore original 12 sample products?
+                    {t.restoreOriginalPrompt}
                   </span>
                   <button
                     type="button"
@@ -1129,7 +1148,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
                     className="min-h-[36px] px-3 py-1.5 rounded-2xl glass-pill text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 touch-manipulation select-none shrink-0"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset Defaults</span>
+                    <span>{t.resetDefaultsBtn}</span>
                   </button>
                 </div>
               </div>
@@ -1139,7 +1158,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
           {/* Sticky Modal Footer: Always-visible Close / Done button for one-handed mobile use */}
           <div className="px-3.5 sm:px-5 py-2.5 border-t border-slate-200/70 dark:border-white/[0.08] shrink-0 flex items-center justify-between gap-3">
             <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              Changes save automatically to device
+              {t.changesSaveAuto}
             </span>
             <button
               type="button"
@@ -1147,7 +1166,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
               className="min-h-[40px] px-4 py-2 rounded-2xl futuristic-cta text-xs font-bold flex items-center gap-1.5 transition touch-manipulation select-none shrink-0"
             >
               <Check className="w-4 h-4" />
-              <span>Done &amp; Close</span>
+              <span>{t.doneAndCloseBtn}</span>
             </button>
           </div>
         </div>
@@ -1158,7 +1177,7 @@ export const ManageCatalogModal: React.FC<ManageCatalogModalProps> = ({
         isOpen={isCameraScannerOpen}
         onClose={() => setIsCameraScannerOpen(false)}
         onDetected={handleCameraDetectedUpc}
-        title="Scan Product UPC Barcode"
+        title={t.scannerMainTitle}
       />
     </>
   );
